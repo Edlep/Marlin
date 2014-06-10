@@ -16,7 +16,7 @@
 // startup. Implementation of an idea by Prof Braino to inform user that any changes made to this
 // build by the user have been successfully uploaded into firmware.
 #define STRING_VERSION_CONFIG_H __DATE__ " " __TIME__ // build date and time
-#define STRING_CONFIG_H_AUTHOR "(jcrocholl, Mini Kossel)" // Who made the changes.
+#define STRING_CONFIG_H_AUTHOR "(Edlep, Kossel)" // Who made the changes.
 
 // SERIAL_PORT selects which serial port should be used for communication with the host.
 // This allows the connection of wireless adapters (for instance) to non-default port pins.
@@ -73,7 +73,7 @@
 // 21 = Elefu Ra Board (v3)
 
 #ifndef MOTHERBOARD
-#define MOTHERBOARD 33
+#define MOTHERBOARD 703
 #endif
 
 // Define this to set a custom name for your generic Mendel,
@@ -107,10 +107,10 @@
 #define DELTA_SEGMENTS_PER_SECOND 160
 
 // Center-to-center distance of the holes in the diagonal push rods.
-#define DELTA_DIAGONAL_ROD 186.0 // mm
+#define DELTA_DIAGONAL_ROD 303.0 // mm
 
 // Horizontal offset from middle of printer to smooth rod center.
-#define DELTA_SMOOTH_ROD_OFFSET 128.0 // mm
+#define DELTA_SMOOTH_ROD_OFFSET 217.4 // mm
 
 // Horizontal offset of the universal joints on the end effector.
 #define DELTA_EFFECTOR_OFFSET 19.9 // mm
@@ -122,7 +122,7 @@
 #define DELTA_RADIUS (DELTA_SMOOTH_ROD_OFFSET-DELTA_EFFECTOR_OFFSET-DELTA_CARRIAGE_OFFSET)
 
 // Print surface diameter/2 minus unreachable space (avoid collisions with vertical towers).
-#define DELTA_PRINTABLE_RADIUS 70.0
+#define DELTA_PRINTABLE_RADIUS 100.0
 
 // Effective X/Y positions of the three vertical towers.
 #define SIN_60 0.8660254037844386
@@ -172,10 +172,10 @@
 // 147 is Pt100 with 4k7 pullup
 // 110 is Pt100 with 1k pullup (non standard)
 
-#define TEMP_SENSOR_0 5
+#define TEMP_SENSOR_0 1
 #define TEMP_SENSOR_1 0
 #define TEMP_SENSOR_2 0
-#define TEMP_SENSOR_BED 0
+#define TEMP_SENSOR_BED 1
 
 // This makes temp sensor 1 a redundant sensor for sensor 0. If the temperatures difference between these sensors is to high the print will be aborted.
 //#define TEMP_SENSOR_1_AS_REDUNDANT
@@ -386,9 +386,10 @@ const bool Z_MAX_ENDSTOP_INVERTING = false; // set to true to invert the logic o
   #define FRONT_PROBE_BED_POSITION -DELTA_PROBABLE_RADIUS
 
   // these are the offsets to the probe relative to the extruder tip (Hotend - Probe)
-  #define X_PROBE_OFFSET_FROM_EXTRUDER -1.0
-  #define Y_PROBE_OFFSET_FROM_EXTRUDER 21.0
-  #define Z_PROBE_OFFSET_FROM_EXTRUDER -6.7
+  // Nozzle FSR Settings
+  #define X_PROBE_OFFSET_FROM_EXTRUDER 0.0
+  #define Y_PROBE_OFFSET_FROM_EXTRUDER 0.0
+  #define Z_PROBE_OFFSET_FROM_EXTRUDER 0.3
 
   #define Z_RAISE_BEFORE_HOMING 4       // (in mm) Raise Z before homing (G28) for Probe Clearance.
                                         // Be sure you have this distance over your Z_MAX_POS in case
@@ -428,7 +429,7 @@ const bool Z_MAX_ENDSTOP_INVERTING = false; // set to true to invert the logic o
   #define ACCURATE_BED_LEVELING
 
   #ifdef ACCURATE_BED_LEVELING
-    #define ACCURATE_BED_LEVELING_POINTS 7
+    #define ACCURATE_BED_LEVELING_POINTS 5
     #define ACCURATE_BED_LEVELING_GRID_X ((RIGHT_PROBE_BED_POSITION - LEFT_PROBE_BED_POSITION) / (ACCURATE_BED_LEVELING_POINTS - 1))
     #define ACCURATE_BED_LEVELING_GRID_Y ((BACK_PROBE_BED_POSITION - FRONT_PROBE_BED_POSITION) / (ACCURATE_BED_LEVELING_POINTS - 1))
 
@@ -459,12 +460,12 @@ const bool Z_MAX_ENDSTOP_INVERTING = false; // set to true to invert the logic o
 // default settings
 
 #define XYZ_FULL_STEPS_PER_ROTATION 200
-#define XYZ_MICROSTEPS 16
+#define XYZ_MICROSTEPS 32
 #define XYZ_BELT_PITCH 2
-#define XYZ_PULLEY_TEETH 17
+#define XYZ_PULLEY_TEETH 20
 #define XYZ_STEPS (XYZ_FULL_STEPS_PER_ROTATION * XYZ_MICROSTEPS / double(XYZ_BELT_PITCH) / double(XYZ_PULLEY_TEETH))
 
-#define DEFAULT_AXIS_STEPS_PER_UNIT   {XYZ_STEPS, XYZ_STEPS, XYZ_STEPS, 100}
+#define DEFAULT_AXIS_STEPS_PER_UNIT   {XYZ_STEPS, XYZ_STEPS, XYZ_STEPS, 190}
 #define DEFAULT_MAX_FEEDRATE          {200, 200, 200, 200}    // (mm/sec)
 #define DEFAULT_MAX_ACCELERATION      {9000,9000,9000,9000}    // X, Y, Z, E maximum start speed for accelerated moves. E default values are good for skeinforge 40+, for older versions raise them a lot.
 

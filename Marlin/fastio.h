@@ -24,6 +24,7 @@
 
 /// Read a pin
 #define _READ(IO) ((bool)(DIO ## IO ## _RPORT & MASK(DIO ## IO ## _PIN)))
+#define _READ_RAW(IO) ((uint8_t)(DIO ## IO ## _RPORT & MASK(DIO ## IO ## _PIN)))
 /// write to a pin
 // On some boards pins > 0x100 are used. These are not converted to atomic actions. An critical section is needed.
 
@@ -64,6 +65,7 @@
 
 /// Read a pin wrapper
 #define READ(IO)  _READ(IO)
+#define READ_RAW(IO)  _READ_RAW(IO)
 /// Write to a pin wrapper
 #define WRITE(IO, v)  _WRITE(IO, v)
 

@@ -980,6 +980,7 @@ static void clean_up_after_endstop_move() {
 }
 
 static void engage_z_probe() {
+  return;
     // Engage Z Servo endstop if enabled
     #ifdef SERVO_ENDSTOPS
     if (servo_endstops[Z_AXIS] > -1) {
@@ -1007,6 +1008,7 @@ static void engage_z_probe() {
 }
 
 static void retract_z_probe() {
+  return;
     // Retract Z Servo endstop if enabled
     #ifdef SERVO_ENDSTOPS
     if (servo_endstops[Z_AXIS] > -1) {

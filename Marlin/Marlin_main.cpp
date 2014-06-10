@@ -887,6 +887,30 @@ static void run_z_probe() {
     plan_bed_level_matrix.set_to_identity();
 
 #ifdef DELTA
+    
+  #ifdef FSR_BED_LEVELING
+    
+    feedrate = 600; //mm/min
+    float step = 0.05;
+    int direction = -1;
+    // Consider the glass touched if the raw ADC value is reduced by 5% or more.
+    int analog_fsr_untouched = READ_RAW(Z_MIN_PIN);
+    int threshold = analog_fsr_untouched * 95 / 100;
+    
+    // Tests for nozzle fsr
+    SERIAL_PROTOCOLPGM("Z_MIN initial value: ");
+    SERIAL_PROTOCOLLN(READ_RAW(Z_MIN_PIN));
+    
+    while (READ(Z_MIN_PIN) == Z_MIN_ENDSTOP_INVERTING) 
+    {
+      destination[Z_AXIS] += step * direction;
+      prepare_move_raw();
+      st_synchronize();
+    }
+    SERIAL_PROTOCOLPGM("Z_MIN stop value: ");
+    SERIAL_PROTOCOLLN(READ_RAW(Z_MIN_PIN));
+    
+  #else // FSR_BED_LEVELING
     enable_endstops(true);
     float start_z = current_position[Z_AXIS];
     long start_steps = st_get_position(Z_AXIS);
@@ -904,6 +928,7 @@ static void run_z_probe() {
     current_position[Z_AXIS] = mm;
     calculate_delta(current_position);
     plan_set_position(delta[X_AXIS], delta[Y_AXIS], delta[Z_AXIS], current_position[E_AXIS]);
+  #endif  // FSR_BED_LEVELING
 #else
     feedrate = homing_feedrate[Z_AXIS];
 

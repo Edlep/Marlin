@@ -404,6 +404,8 @@ const bool Z_MAX_ENDSTOP_INVERTING = false; // set to true to invert the logic o
   //The value is the delay to turn the servo off after powered on - depends on the servo speed; 300ms is good value, but you can try lower it.
   // You MUST HAVE the SERVO_ENDSTOPS defined to use here a value higher than zero otherwise your code will not compile.
 
+  #define  FSR_BED_LEVELING
+  
 //  #define PROBE_SERVO_DEACTIVATION_DELAY 300
 
 

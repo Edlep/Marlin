@@ -205,6 +205,8 @@ float min_pos[3] = { X_MIN_POS, Y_MIN_POS, Z_MIN_POS };
 float max_pos[3] = { X_MAX_POS, Y_MAX_POS, Z_MAX_POS };
 bool axis_known_position[3] = {false, false, false};
 float zprobe_zoffset;
+bool zprobe_engaged = false;
+bool bed_level_calculated = false;
 
 // Extruder offset
 #if EXTRUDERS > 1
@@ -249,9 +251,9 @@ int EtoPPressure=0;
 float delta[3] = {0.0, 0.0, 0.0};
 #endif
 
-#ifdef NONLINEAR_BED_LEVELING
+// #ifdef NONLINEAR_BED_LEVELING
 float bed_level[ACCURATE_BED_LEVELING_POINTS][ACCURATE_BED_LEVELING_POINTS];
-#endif
+// #endif
 
 //===========================================================================
 //=============================private variables=============================
@@ -883,33 +885,68 @@ static void set_bed_level_equation(float z_at_xLeft_yFront, float z_at_xRight_yF
 }
 #endif // ACCURATE_BED_LEVELING
 
+// Readings are sometimes unstable, so calculate a mean value
+static float mean_probe_read(uint8_t nruns)
+{
+    float retVal = 0.;
+    for (int i=0;i<nruns;i++)
+    {
+      retVal += analogRead(FSR_PROBE_PIN);
+      st_synchronize();
+    }
+    return retVal/nruns;
+}
+
+// Readings are sometimes unstable, so read several times
+static bool probe_really_touching(float threshold, uint8_t nreads)
+{
+    for (int i=0;i<nreads;i++)
+    {
+      float fsr_value = analogRead(FSR_PROBE_PIN);
+      if (fsr_value < threshold)
+        return false;
+    }
+    return true;
+}
+
 static void run_z_probe() {
     plan_bed_level_matrix.set_to_identity();
 
 #ifdef DELTA
-    
   #ifdef FSR_BED_LEVELING
-    
-    feedrate = 600; //mm/min
+    feedrate = XY_TRAVEL_SPEED * 0.75; //mm/min
     float step = 0.05;
     int direction = -1;
-    // Consider the glass touched if the raw ADC value is reduced by 5% or more.
-    int analog_fsr_untouched = READ_RAW(Z_MIN_PIN);
-    int threshold = analog_fsr_untouched * 95 / 100;
-    
-    // Tests for nozzle fsr
-    SERIAL_PROTOCOLPGM("Z_MIN initial value: ");
-    SERIAL_PROTOCOLLN(READ_RAW(Z_MIN_PIN));
-    
-    while (READ(Z_MIN_PIN) == Z_MIN_ENDSTOP_INVERTING) 
+
+    float analog_fsr_untouched = mean_probe_read(15);
+    float threshold = analog_fsr_untouched * (1. + FSR_PROBE_THRESHOLD);
+    bool is_touching;
+    float fsr_value;
+    for(;;)
     {
+      fsr_value = analogRead(FSR_PROBE_PIN);
+      if (fsr_value > threshold)
+       if (probe_really_touching(threshold, 4))
+        break;
+        
+//      SERIAL_PROTOCOLPGM("Z_MIN: ");
+//     SERIAL_PROTOCOLLN(fsr_value);
+//      delay(1); 
       destination[Z_AXIS] += step * direction;
       prepare_move_raw();
       st_synchronize();
     }
-    SERIAL_PROTOCOLPGM("Z_MIN stop value: ");
-    SERIAL_PROTOCOLLN(READ_RAW(Z_MIN_PIN));
-    
+//    SERIAL_PROTOCOLPGM("Stop val: ");
+//    SERIAL_PROTOCOLLN(fsr_value);
+//    return;
+    while (step > 0.005) {
+      step *= 0.8;
+      feedrate *= 0.8;
+      direction = (fsr_value > threshold) ? 1 : -1;
+      destination[Z_AXIS] += step * direction;
+      prepare_move_raw();
+      st_synchronize();
+    }
   #else // FSR_BED_LEVELING
     enable_endstops(true);
     float start_z = current_position[Z_AXIS];
@@ -928,7 +965,7 @@ static void run_z_probe() {
     current_position[Z_AXIS] = mm;
     calculate_delta(current_position);
     plan_set_position(delta[X_AXIS], delta[Y_AXIS], delta[Z_AXIS], current_position[E_AXIS]);
-  #endif  // FSR_BED_LEVELING
+  #endif // FSR_BED_LEVELING
 #else
     feedrate = homing_feedrate[Z_AXIS];
 
@@ -1005,7 +1042,12 @@ static void clean_up_after_endstop_move() {
 }
 
 static void engage_z_probe() {
-  return;
+  return; //
+    if (zprobe_engaged)
+    {
+	SERIAL_PROTOCOLLN("zprobe already deployed");
+	return;
+    }
     // Engage Z Servo endstop if enabled
     #ifdef SERVO_ENDSTOPS
     if (servo_endstops[Z_AXIS] > -1) {
@@ -1020,20 +1062,37 @@ static void engage_z_probe() {
     }
     #else // Deploy the Z probe by touching the belt, no servo needed.
     feedrate = homing_feedrate[X_AXIS];
-    destination[X_AXIS] = 35;
-    destination[Y_AXIS] = 72;
-    destination[Z_AXIS] = 100;
+    destination[X_AXIS] = -33;
+    destination[Y_AXIS] = -66;
+    destination[Z_AXIS] = 14;
     prepare_move_raw();
 
-    feedrate = homing_feedrate[X_AXIS]/10;
-    destination[X_AXIS] = 0;
+    destination[X_AXIS] = -87;
+    destination[Y_AXIS] = -51;
     prepare_move_raw();
+    
+    destination[Z_AXIS] = 56;
+    prepare_move_raw();
+    
+    destination[X_AXIS] = 0;
+    destination[Y_AXIS] = 0;
+    prepare_move_raw();
+    
     st_synchronize();
     #endif //SERVO_ENDSTOPS
+    
+    SERIAL_PROTOCOLLN("zprobe engaged");
+    zprobe_engaged = true;
 }
 
 static void retract_z_probe() {
-  return;
+  return; 
+    if (!zprobe_engaged)
+    {
+	SERIAL_PROTOCOLLN("zprobe already retracted");
+	return;
+    }
+    
     // Retract Z Servo endstop if enabled
     #ifdef SERVO_ENDSTOPS
     if (servo_endstops[Z_AXIS] > -1) {
@@ -1048,29 +1107,31 @@ static void retract_z_probe() {
     }
     #else // Push up the Z probe by moving the end effector, no servo needed.
     feedrate = homing_feedrate[X_AXIS];
-    destination[Z_AXIS] = current_position[Z_AXIS] + 20;
+    destination[X_AXIS] = -87;
+    destination[Y_AXIS] = -35;
+    destination[Z_AXIS] = 73;
     prepare_move_raw();
 
-    destination[X_AXIS] = -46;
-    destination[Y_AXIS] = 59;
-    destination[Z_AXIS] = 28;
+    destination[X_AXIS] = -124;
     prepare_move_raw();
-
-    // TODO: Move the nozzle down until the Z probe switch is activated.
-    //enable_endstops(true);
-    //destination[Z_AXIS] = current_position[Z_AXIS] - 30;
-    //enable_endstops(false);
-
-    // Move the nozzle down further to push the probe into retracted position.
-    feedrate = homing_feedrate[Z_AXIS]/10;
-    destination[Z_AXIS] = current_position[Z_AXIS] - 20;
+    
+    destination[Z_AXIS] = 52;
     prepare_move_raw();
-
-    feedrate = homing_feedrate[Z_AXIS];
-    destination[Z_AXIS] = current_position[Z_AXIS] + 30;
+    
+    destination[X_AXIS] = -85;
+    destination[Y_AXIS] = -39;
+    destination[Z_AXIS] = 49;
     prepare_move_raw();
+    
+    destination[X_AXIS] = 0;
+    destination[Y_AXIS] = 0;
+    prepare_move_raw();
+    
     st_synchronize();
     #endif //SERVO_ENDSTOPS
+    
+    SERIAL_PROTOCOLLN("zprobe retracted");
+    zprobe_engaged = false;
 }
 
 /// Probe bed height at position (x,y), returns the measured z value
@@ -1331,11 +1392,11 @@ void process_commands()
       #endif //FWRETRACT
     case 28: //G28 Home all Axis one at a time
 #ifdef ENABLE_AUTO_BED_LEVELING
-      plan_bed_level_matrix.set_to_identity();  //Reset the plane ("erase" all leveling data)
+//      plan_bed_level_matrix.set_to_identity();  //Reset the plane ("erase" all leveling data)
 #endif //ENABLE_AUTO_BED_LEVELING
 
 #ifdef NONLINEAR_BED_LEVELING
-      reset_bed_level();
+//      reset_bed_level();
 #endif //NONLINEAR_BED_LEVELING
 
       saved_feedrate = feedrate;
@@ -1550,6 +1611,12 @@ void process_commands()
             #error "You must have a Z_MIN endstop in order to enable Auto Bed Leveling feature!!! Z_MIN_PIN must point to a valid hardware pin."
             #endif
 
+	    if (bed_level_calculated && !code_seen('F'))
+	    {
+	      SERIAL_PROTOCOLLN("Bed level already calibrated. Use \"G29 F\" to force re-calibration.");
+	      break;
+	    }
+	    
             st_synchronize();
             // make sure the bed_level_rotation_matrix is identity or the planner will get it incorectly
             //vector_3 corrected_position = plan_get_position_mm();
@@ -1676,6 +1743,10 @@ void process_commands()
 #endif // ACCURATE_BED_LEVELING
             st_synchronize();
 
+	    destination[Z_AXIS] = current_position[Z_AXIS] + Z_RAISE_BETWEEN_PROBINGS;
+	    prepare_move();
+	    st_synchronize();
+	      
           #ifndef SERVO_ENDSTOPS
             retract_z_probe();   // Retract Z probe by moving the end effector.
           #endif //SERVO_ENDSTOPS
@@ -1694,11 +1765,13 @@ void process_commands()
             plan_set_position(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS]);
           #endif //NONLINEAR_BED_LEVELING
         }
+        bed_level_calculated = true;
         break;
 
     case 30: // G30 Single Z Probe
         {
-            engage_z_probe(); // Engage Z Servo endstop if available
+	    if (!zprobe_engaged)
+	      engage_z_probe(); // Engage Z Servo endstop if available
 
             st_synchronize();
             // TODO: make sure the bed_level_rotation_matrix is identity or the planner will get set incorectly
@@ -1718,7 +1791,15 @@ void process_commands()
 
             clean_up_after_endstop_move();
 
-            retract_z_probe(); // Retract Z Servo endstop if available
+	    if(!code_seen('s'))
+	    {
+	      destination[Z_AXIS] = current_position[Z_AXIS] + Z_RAISE_BETWEEN_PROBINGS;
+	      prepare_move();
+	      st_synchronize();
+	    }
+	    
+	    if(!code_seen('P'))
+	      retract_z_probe(); // Retract Z Servo endstop if available
         }
         break;
 #endif // ENABLE_AUTO_BED_LEVELING

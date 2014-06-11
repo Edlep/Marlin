@@ -1028,11 +1028,12 @@
 #define Z_STEP_PIN         3
 #define Z_DIR_PIN          2
 #define Z_STOP_PIN         20
+#define Z_MIN_PIN         27
 
 #define E0_STEP_PIN         1
 #define E0_DIR_PIN          0
 
-#define LED_PIN            -1
+// #define LED_PIN            -1
 
 #define FAN_PIN            -1
  #if FAN_PIN == 12 || FAN_PIN ==13
@@ -2314,7 +2315,6 @@
 
 #endif
 
-
 /****************************************************************************************
 * MegaTronics v3.0
 *
@@ -2330,16 +2330,16 @@
  #define LARGE_FLASH        true
  
 
-	#define X_STEP_PIN         58
-	#define X_DIR_PIN          57
-	#define X_ENABLE_PIN       59
-	#define X_MIN_PIN          37
+	#define X_STEP_PIN         22 //58
+	#define X_DIR_PIN          60 //57
+	#define X_ENABLE_PIN       23 //59
+	#define X_MIN_PIN          -1 //37
 	#define X_MAX_PIN          40   //2 //Max endstops default to disabled "-1", set to commented value to enable.
 
 	#define Y_STEP_PIN         5 // A6
 	#define Y_DIR_PIN          17 // A0
 	#define Y_ENABLE_PIN       4
-	#define Y_MIN_PIN          41
+	#define Y_MIN_PIN          -1 //41
 	#define Y_MAX_PIN          38   //15
 
 	#define Z_STEP_PIN         16 // A2
@@ -2375,6 +2375,7 @@
 	#define HEATER_BED_PIN 10 
  #define FAN_PIN 6
  #define FAN2_PIN 7
+// #define CONTROLLERFAN_PIN FAN2_PIN
  
  #if TEMP_SENSOR_0 == -1
    #define TEMP_0_PIN 11 // ANALOG NUMBERING
@@ -2679,7 +2680,7 @@
     #define Z_MIN_PIN Z_STOP_PIN
     #define Z_MAX_PIN -1
   #else
-    #define Z_MIN_PIN -1
+//     #define Z_MIN_PIN -1
     #define Z_MAX_PIN Z_STOP_PIN
   #endif
 #endif

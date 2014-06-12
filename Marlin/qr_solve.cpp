@@ -608,7 +608,6 @@ double dnrm2 ( int n, double x[], int incx )
   double norm;
   double scale;
   double ssq;
-  double value;
 
   if ( n < 1 || incx < 1 )
   {
@@ -1236,16 +1235,16 @@ void dqrlss ( double a[], int lda, int m, int n, int kr, double b[], double x[],
 */
 {
   int i;
-  int info;
+//   int info;
   int j;
-  int job;
+//   int job;
   int k;
   double t;
 
   if ( kr != 0 )
   {
-    job = 110;
-    info = dqrsl ( a, lda, m, kr, qraux, b, rsd, rsd, x, rsd, rsd, job );
+//     job = 110;
+//     info = dqrsl ( a, lda, m, kr, qraux, b, rsd, rsd, x, rsd, rsd, job );
   }
 
   for ( i = 0; i < n; i++ )
@@ -1898,26 +1897,26 @@ double *qr_solve ( int m, int n, double a[], double b[] )
 */
 {
   double *a_qr;
-  int ind;
-  int itask;
+//   int ind;
+//   int itask;
   int *jpvt;
-  int kr;
-  int lda;
+//   int kr;
+//   int lda;
   double *qraux;
   double *r;
-  double tol;
+//   double tol;
   double *x;
 
   a_qr = r8mat_copy_new ( m, n, a );
-  lda = m;
-  tol = r8_epsilon ( ) / r8mat_amax ( m, n, a_qr );
+//   lda = m;
+//   tol = r8_epsilon ( ) / r8mat_amax ( m, n, a_qr );
   x = ( double * ) malloc ( n * sizeof ( double ) );
   jpvt = ( int * ) malloc ( n * sizeof ( int ) );
   qraux = ( double * ) malloc ( n * sizeof ( double ) );
   r = ( double * ) malloc ( m * sizeof ( double ) );
-  itask = 1;
+//   itask = 1;
 
-  ind = dqrls ( a_qr, lda, m, n, tol, &kr, b, x, r, jpvt, qraux, itask );
+//   ind = dqrls ( a_qr, lda, m, n, tol, &kr, b, x, r, jpvt, qraux, itask );
 
   free ( a_qr );
   free ( jpvt );

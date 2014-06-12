@@ -2330,8 +2330,8 @@
  #define LARGE_FLASH        true
  
 
-	#define X_STEP_PIN         22 //58
-	#define X_DIR_PIN          60 //57
+	#define X_STEP_PIN         22 //58  // The X pins of my board are deffective, so I use the E2 pins instead.
+	#define X_DIR_PIN          60 //57  // Reset the right values for your board (58, 57 and 59) !!
 	#define X_ENABLE_PIN       23 //59
 	#define X_MIN_PIN          -1 //37
 	#define X_MAX_PIN          40   //2 //Max endstops default to disabled "-1", set to commented value to enable.

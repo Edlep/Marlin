@@ -16,14 +16,13 @@
 // startup. Implementation of an idea by Prof Braino to inform user that any changes made to this
 // build by the user have been successfully uploaded into firmware.
 #define STRING_VERSION_CONFIG_H __DATE__ " " __TIME__ // build date and time
-#define STRING_CONFIG_H_AUTHOR "(jcrocholl, Mini Kossel)" // Who made the changes.
+#define STRING_CONFIG_H_AUTHOR "Edlep" // Who made the changes.
 
 // SERIAL_PORT selects which serial port should be used for communication with the host.
 // This allows the connection of wireless adapters (for instance) to non-default port pins.
 // Serial port 0 is still used by the Arduino bootloader regardless of this setting.
 #define SERIAL_PORT 0
 
-// This determines the communication speed of the printer
 // This determines the communication speed of the printer
 //#define BAUDRATE 250000
 #define BAUDRATE 115200
@@ -78,7 +77,7 @@
 #endif
 
 // Define this to set a custom name for your generic Mendel,
-// #define CUSTOM_MENDEL_NAME "This Mendel"
+#define CUSTOM_MENDEL_NAME "Kossel"
 
 // Define this to set a unique identifier for this printer, (Used by some programs to differentiate between machines)
 // You can use an online service to generate a random UUID. (eg http://www.uuidgenerator.net/version4)
@@ -178,7 +177,10 @@
 #define TEMP_SENSOR_2 0
 #define TEMP_SENSOR_BED 1
 
-#define EXTRUDER_0_FAN_PIN FAN2_PIN
+// Supplementary fans for extruders (see Configuration_adv.h)
+#define EXTRUDER_0_FAN_PIN FAN2_PIN 
+#define EXTRUDER_1_FAN_PIN -1 
+
 // 
 // This makes temp sensor 1 a redundant sensor for sensor 0. If the temperatures difference between these sensors is to high the print will be aborted.
 //#define TEMP_SENSOR_1_AS_REDUNDANT
@@ -382,7 +384,7 @@ const bool Z_MAX_ENDSTOP_INVERTING = true; // set to true to invert the logic of
 #ifdef ENABLE_AUTO_BED_LEVELING
 
   // these are the positions on the bed to do the probing
-  #define DELTA_PROBABLE_RADIUS (DELTA_PRINTABLE_RADIUS-10)
+  #define DELTA_PROBABLE_RADIUS (DELTA_PRINTABLE_RADIUS * 3./4.)
   #define LEFT_PROBE_BED_POSITION -DELTA_PROBABLE_RADIUS
   #define RIGHT_PROBE_BED_POSITION DELTA_PROBABLE_RADIUS
   #define BACK_PROBE_BED_POSITION DELTA_PROBABLE_RADIUS
@@ -431,7 +433,7 @@ const bool Z_MAX_ENDSTOP_INVERTING = true; // set to true to invert the logic of
   #define ACCURATE_BED_LEVELING
   
   #define FSR_BED_LEVELING
-  #define FSR_PROBE_PIN TEMP_1_PIN
+  #define FSR_PROBE_PIN TEMP_1_PIN // Must be an analog pin
   #define FSR_PROBE_THRESHOLD 0.04 // Probe for a variation of 4%
 
   #ifdef ACCURATE_BED_LEVELING

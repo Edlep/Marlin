@@ -251,9 +251,9 @@ int EtoPPressure=0;
 float delta[3] = {0.0, 0.0, 0.0};
 #endif
 
-// #ifdef NONLINEAR_BED_LEVELING
+#ifdef ACCURATE_BED_LEVELING
 float bed_level[ACCURATE_BED_LEVELING_POINTS][ACCURATE_BED_LEVELING_POINTS];
-// #endif
+#endif 
 
 //===========================================================================
 //=============================private variables=============================
@@ -261,7 +261,6 @@ float bed_level[ACCURATE_BED_LEVELING_POINTS][ACCURATE_BED_LEVELING_POINTS];
 const char axis_codes[NUM_AXIS] = {'X', 'Y', 'Z', 'E'};
 static float destination[NUM_AXIS] = {  0.0, 0.0, 0.0, 0.0};
 static float offset[3] = {0.0, 0.0, 0.0};
-static bool home_all_axis = true;
 static float feedrate = 1500.0, next_feedrate, saved_feedrate;
 static long gcode_N, gcode_LastN, Stopped_gcode_LastN = 0;
 
@@ -825,6 +824,7 @@ static void axis_is_at_home(int axis) {
 
 #ifdef ENABLE_AUTO_BED_LEVELING
 #ifdef ACCURATE_BED_LEVELING
+#ifndef NONLINEAR_BED_LEVELING
 static void set_bed_level_equation_lsq(double *plane_equation_coefficients)
 {
     vector_3 planeNormal = vector_3(-plane_equation_coefficients[0], -plane_equation_coefficients[1], 1);
@@ -847,6 +847,7 @@ static void set_bed_level_equation_lsq(double *plane_equation_coefficients)
 
     plan_set_position(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS]);
 }
+#endif // NONLINEAR_BED_LEVELING
 
 #else
 static void set_bed_level_equation(float z_at_xLeft_yFront, float z_at_xRight_yFront, float z_at_xLeft_yBack) {
@@ -1015,9 +1016,9 @@ static void do_blocking_move_to(float x, float y, float z) {
     feedrate = oldFeedRate;
 }
 
-static void do_blocking_move_relative(float offset_x, float offset_y, float offset_z) {
-    do_blocking_move_to(current_position[X_AXIS] + offset_x, current_position[Y_AXIS] + offset_y, current_position[Z_AXIS] + offset_z);
-}
+// static void do_blocking_move_relative(float offset_x, float offset_y, float offset_z) {
+//     do_blocking_move_to(current_position[X_AXIS] + offset_x, current_position[Y_AXIS] + offset_y, current_position[Z_AXIS] + offset_z);
+// }
 
 static void setup_for_endstop_move() {
     saved_feedrate = feedrate;
@@ -1309,9 +1310,6 @@ void process_commands()
 {
   unsigned long codenum; //throw away variable
   char *starpos = NULL;
-#ifdef ENABLE_AUTO_BED_LEVELING
-  float x_tmp, y_tmp, z_tmp, real_z;
-#endif
   if(code_seen('G'))
   {
     switch((int)code_value())
@@ -1442,7 +1440,7 @@ void process_commands()
 
 #else // NOT DELTA
 
-      home_all_axis = !((code_seen(axis_codes[0])) || (code_seen(axis_codes[1])) || (code_seen(axis_codes[2])));
+      bool home_all_axis = !((code_seen(axis_codes[0])) || (code_seen(axis_codes[1])) || (code_seen(axis_codes[2])));
 
       #if Z_HOME_DIR > 0                      // If homing away from BED do Z first
       if((home_all_axis) || (code_seen(axis_codes[Z_AXIS]))) {
@@ -1647,10 +1645,12 @@ void process_commands()
             // the normal vector to the plane is formed by the coefficients of the plane equation in the standard form, which is Vx*x+Vy*y+Vz*z+d = 0
             // so Vx = -a Vy = -b Vz = 1 (we want the vector facing towards positive Z
 
+	  #ifndef NONLINEAR_BED_LEVELING
             // "A" matrix of the linear system of equations
             double eqnAMatrix[ACCURATE_BED_LEVELING_POINTS*ACCURATE_BED_LEVELING_POINTS*3];
             // "B" vector of Z points
             double eqnBVector[ACCURATE_BED_LEVELING_POINTS*ACCURATE_BED_LEVELING_POINTS];
+	  #endif // NONLINEAR_BED_LEVELING
 
             #ifdef NONLINEAR_BED_LEVELING
             float z_offset = Z_PROBE_OFFSET_FROM_EXTRUDER;
@@ -1692,11 +1692,13 @@ void process_commands()
                 bed_level[xCount][yCount] = measured_z + z_offset;
                 #endif //NONLINEAR_BED_LEVELING
 
+	  #ifndef NONLINEAR_BED_LEVELING
                 eqnBVector[probePointCounter] = measured_z;
-
-                eqnAMatrix[probePointCounter + 0*ACCURATE_BED_LEVELING_POINTS*ACCURATE_BED_LEVELING_POINTS] = xProbe;
+		eqnAMatrix[probePointCounter + 0*ACCURATE_BED_LEVELING_POINTS*ACCURATE_BED_LEVELING_POINTS] = xProbe;
                 eqnAMatrix[probePointCounter + 1*ACCURATE_BED_LEVELING_POINTS*ACCURATE_BED_LEVELING_POINTS] = yProbe;
                 eqnAMatrix[probePointCounter + 2*ACCURATE_BED_LEVELING_POINTS*ACCURATE_BED_LEVELING_POINTS] = 1;
+	  #endif // NONLINEAR_BED_LEVELING
+		
                 probePointCounter++;
               }
             }
@@ -1754,10 +1756,10 @@ void process_commands()
             // The following code correct the Z height difference from z-probe position and hotend tip position.
             // The Z height on homing is measured by Z-Probe, but the probe is quite far from the hotend.
             // When the bed is uneven, this height must be corrected.
-            real_z = float(st_get_position(Z_AXIS))/axis_steps_per_unit[Z_AXIS];  //get the real Z (since the auto bed leveling is already correcting the plane)
-            x_tmp = current_position[X_AXIS] + X_PROBE_OFFSET_FROM_EXTRUDER;
-            y_tmp = current_position[Y_AXIS] + Y_PROBE_OFFSET_FROM_EXTRUDER;
-            z_tmp = current_position[Z_AXIS];
+            float real_z = float(st_get_position(Z_AXIS))/axis_steps_per_unit[Z_AXIS];  //get the real Z (since the auto bed leveling is already correcting the plane)
+            float x_tmp = current_position[X_AXIS] + X_PROBE_OFFSET_FROM_EXTRUDER;
+            float y_tmp = current_position[Y_AXIS] + Y_PROBE_OFFSET_FROM_EXTRUDER;
+            float z_tmp = current_position[Z_AXIS];
 
             apply_rotation_xyz(plan_bed_level_matrix, x_tmp, y_tmp, z_tmp);         //Apply the correction sending the probe offset
             current_position[Z_AXIS] = z_tmp - real_z + current_position[Z_AXIS];   //The difference is added to current position and sent to planner.
@@ -3153,9 +3155,13 @@ void process_commands()
       SERIAL_ECHOLN(MSG_INVALID_EXTRUDER);
     }
     else {
+      #ifdef DUAL_X_CARRIAGE
       boolean make_move = false;
+      #endif // DUAL_X_CARRIAGE
       if(code_seen('F')) {
-        make_move = true;
+	#ifdef DUAL_X_CARRIAGE
+	make_move = true;
+	#endif // DUAL_X_CARRIAGE
         next_feedrate = code_value();
         if(next_feedrate > 0.0) {
           feedrate = next_feedrate;
@@ -3271,12 +3277,17 @@ void ClearToSend()
 
 void get_coordinates()
 {
+  #ifdef FWRETRACT
   bool seen[4]={false,false,false,false};
+  #endif // FWRETRACT
+  
   for(int8_t i=0; i < NUM_AXIS; i++) {
     if(code_seen(axis_codes[i]))
     {
       destination[i] = (float)code_value() + (axis_relative_modes[i] || relative_mode)*current_position[i];
+  #ifdef FWRETRACT
       seen[i]=true;
+  #endif // FWRETRACT
     }
     else destination[i] = current_position[i]; //Are these else lines really needed?
   }
@@ -3388,6 +3399,7 @@ void calculate_delta(float cartesian[3])
   */
 }
 
+#ifdef ACCURATE_BED_LEVELING
 // Adjust print surface height by linear interpolation over the bed_level array.
 void adjust_delta(float cartesian[3])
 {
@@ -3426,6 +3438,7 @@ void adjust_delta(float cartesian[3])
   SERIAL_ECHOPGM(" offset="); SERIAL_ECHOLN(offset);
   */
 }
+#endif // ACCURATE_BED_LEVELING
 
 void prepare_move_raw()
 {

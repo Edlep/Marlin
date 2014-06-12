@@ -75,7 +75,7 @@ void vector_3::apply_rotation(matrix_3x3 matrix)
 	z = resultZ;
 }
 
-void vector_3::debug(char* title)
+void vector_3::debug(const char* title)
 {
 	SERIAL_PROTOCOL(title);
 	SERIAL_PROTOCOLPGM(" x: ");

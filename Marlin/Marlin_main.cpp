@@ -920,7 +920,6 @@ static void run_z_probe() {
 
     float analog_fsr_untouched = mean_probe_read(15);
     float threshold = analog_fsr_untouched * (1. + FSR_PROBE_THRESHOLD);
-    bool is_touching;
     float fsr_value;
     for(;;)
     {

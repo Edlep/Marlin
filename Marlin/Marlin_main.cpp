@@ -904,7 +904,7 @@ static bool probe_really_touching(float threshold, uint8_t nreads)
     for (int i=0;i<nreads;i++)
     {
       float fsr_value = analogRead(FSR_PROBE_PIN);
-      if (fsr_value < threshold)
+      if (fsr_value > threshold)
         return false;
     }
     return true;
@@ -920,12 +920,16 @@ static void run_z_probe() {
     int direction = -1;
 
     float analog_fsr_untouched = mean_probe_read(15);
-    float threshold = analog_fsr_untouched * (1. + FSR_PROBE_THRESHOLD);
+    float threshold = analog_fsr_untouched * (1. - FSR_PROBE_THRESHOLD);
     float fsr_value;
+    
+    SERIAL_PROTOCOLPGM("Z_MIN init: ");
+    SERIAL_PROTOCOLLN(analog_fsr_untouched);
+    
     for(;;)
     {
       fsr_value = analogRead(FSR_PROBE_PIN);
-      if (fsr_value > threshold)
+      if (fsr_value < threshold)
        if (probe_really_touching(threshold, 4))
         break;
         
@@ -936,8 +940,8 @@ static void run_z_probe() {
       prepare_move_raw();
       st_synchronize();
     }
-//    SERIAL_PROTOCOLPGM("Stop val: ");
-//    SERIAL_PROTOCOLLN(fsr_value);
+   SERIAL_PROTOCOLPGM("Stop val: ");
+   SERIAL_PROTOCOLLN(fsr_value);
 //    return;
     while (step > 0.005) {
       step *= 0.8;

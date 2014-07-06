@@ -393,7 +393,7 @@ const bool Z_MAX_ENDSTOP_INVERTING = true; // set to true to invert the logic of
   // these are the offsets to the probe relative to the extruder tip (Hotend - Probe)
   #define X_PROBE_OFFSET_FROM_EXTRUDER 0
   #define Y_PROBE_OFFSET_FROM_EXTRUDER 0
-  #define Z_PROBE_OFFSET_FROM_EXTRUDER 0.60
+  #define Z_PROBE_OFFSET_FROM_EXTRUDER 0.6
 
   #define Z_RAISE_BEFORE_HOMING 5       // (in mm) Raise Z before homing (G28) for Probe Clearance.
                                         // Be sure you have this distance over your Z_MAX_POS in case
@@ -434,7 +434,7 @@ const bool Z_MAX_ENDSTOP_INVERTING = true; // set to true to invert the logic of
   
   #define FSR_BED_LEVELING
   #define FSR_PROBE_PIN TEMP_1_PIN // Must be an analog pin
-  #define FSR_PROBE_THRESHOLD 0.15 // Probe for a variation of 15%
+  #define FSR_PROBE_THRESHOLD 0.12 // Probe for a variation of 12%
 
   #ifdef ACCURATE_BED_LEVELING
     #define ACCURATE_BED_LEVELING_POINTS 5

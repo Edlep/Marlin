@@ -374,6 +374,14 @@ void setup_killpin()
   #endif
 }
 
+void setup_pausepin()
+{
+  #if defined(PAUSE_PIN) && PAUSE_PIN > -1
+    pinMode(PAUSE_PIN,INPUT);
+    WRITE(PAUSE_PIN,HIGH);
+  #endif
+}
+
 void setup_photpin()
 {
   #if defined(PHOTOGRAPH_PIN) && PHOTOGRAPH_PIN > -1
@@ -443,6 +451,7 @@ void servo_init()
 void setup()
 {
   setup_killpin();
+  setup_pausepin();
   setup_powerhold();
   MYSERIAL.begin(BAUDRATE);
   SERIAL_PROTOCOLLNPGM("start");
@@ -889,13 +898,21 @@ static void set_bed_level_equation(float z_at_xLeft_yFront, float z_at_xRight_yF
 // Readings are sometimes unstable, so calculate a mean value
 static float mean_probe_read(uint8_t nruns)
 {
-    float retVal = 0.;
+    float retVal = 0., newVal;
+    int n = 0;
     for (int i=0;i<nruns;i++)
     {
-      retVal += analogRead(FSR_PROBE_PIN);
+      newVal = analogRead(FSR_PROBE_PIN);
+      if (newVal<900)
+      {
+	retVal += newVal;
+	n++;
+      }
       st_synchronize();
     }
-    return retVal/nruns;
+    if (n!=0)
+      return retVal/n;
+    else return -1;
 }
 
 // Readings are sometimes unstable, so read several times
@@ -920,7 +937,9 @@ static void run_z_probe() {
     int direction = -1;
 
     float analog_fsr_untouched = mean_probe_read(15);
-    float threshold = analog_fsr_untouched * (1. - FSR_PROBE_THRESHOLD);
+    if (analog_fsr_untouched==-1)
+      analog_fsr_untouched = 1023;
+    float threshold = analog_fsr_untouched * (1. - FSR_PROBE_THRESHOLD/100.);
     float fsr_value;
     
     SERIAL_PROTOCOLPGM("Z_MIN init: ");
@@ -1767,6 +1786,7 @@ void process_commands()
 
             apply_rotation_xyz(plan_bed_level_matrix, x_tmp, y_tmp, z_tmp);         //Apply the correction sending the probe offset
             current_position[Z_AXIS] = z_tmp - real_z + current_position[Z_AXIS];   //The difference is added to current position and sent to planner.
+//             plan_set_position(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS]);
             plan_set_position(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS]);
           #endif //NONLINEAR_BED_LEVELING
         }
@@ -3663,6 +3683,10 @@ void manage_inactivity()
     if( 0 == READ(KILL_PIN) )
       kill();
   #endif
+  #if defined(PAUSE_PIN) && PAUSE_PIN > -1
+    if( 0 == READ(PAUSE_PIN) )
+      pause();
+  #endif
   #if defined(CONTROLLERFAN_PIN) && CONTROLLERFAN_PIN > -1
     controllerFan(); //Check if fan should be turned on to cool stepper drivers down
   #endif
@@ -3721,6 +3745,14 @@ void kill()
   LCD_ALERTMESSAGEPGM(MSG_KILLED);
   suicide();
   while(1) { /* Intentionally left empty */ } // Wait for reset
+}
+
+void pause()
+{
+  enquecommand("M600");
+  enquecommand("G4 P0");
+  enquecommand("G4 P0");
+  enquecommand("G4 P0");
 }
 
 void Stop()

@@ -895,6 +895,25 @@ static void set_bed_level_equation(float z_at_xLeft_yFront, float z_at_xRight_yF
 }
 #endif // ACCURATE_BED_LEVELING
 
+
+// Making accurate ADC readings
+// From https://code.google.com/p/tinkerit/wiki/SecretVoltmeter
+long readVcc() 
+{ 
+    long result; 
+    // Read 1.1V reference against AVcc 
+    ADMUX = _BV(REFS0) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1); 
+    delay(2); 
+    // Wait for Vref to settle 
+    ADCSRA |= _BV(ADSC); 
+    // Convert while (bit_is_set(ADCSRA,ADSC)); 
+    result = ADCL; 
+    result |= ADCH<<8; 
+    result = 1125300L / result; 
+    // Back-calculate AVcc in mV 
+    return result; 
+}
+
 // Readings are sometimes unstable, so calculate a mean value
 static float mean_probe_read(uint8_t nruns)
 {
@@ -903,12 +922,12 @@ static float mean_probe_read(uint8_t nruns)
     for (int i=0;i<nruns;i++)
     {
       newVal = analogRead(FSR_PROBE_PIN);
-      if (newVal<900)
+      if (newVal<1023)
       {
 	retVal += newVal;
 	n++;
       }
-      st_synchronize();
+      delay(1);
     }
     if (n!=0)
       return retVal/n;
@@ -936,7 +955,7 @@ static void run_z_probe() {
     float step = 0.05;
     int direction = -1;
 
-    float analog_fsr_untouched = mean_probe_read(15);
+    float analog_fsr_untouched = fsrValue(); // mean_probe_read(15);
     if (analog_fsr_untouched==-1)
       analog_fsr_untouched = 1023;
     float threshold = analog_fsr_untouched * (1. - FSR_PROBE_THRESHOLD/100.);
@@ -947,9 +966,9 @@ static void run_z_probe() {
     
     for(;;)
     {
-      fsr_value = analogRead(FSR_PROBE_PIN);
+      fsr_value = fsrValue(); //analogRead(FSR_PROBE_PIN);
       if (fsr_value < threshold)
-       if (probe_really_touching(threshold, 4))
+//        if (probe_really_touching(threshold, 4))
         break;
         
 //      SERIAL_PROTOCOLPGM("Z_MIN: ");

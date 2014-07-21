@@ -47,6 +47,11 @@ float current_temperature_bed = 0.0;
   int redundant_temperature_raw = 0;
   float redundant_temperature = 0.0;
 #endif
+
+#ifdef FSR_BED_LEVELING
+int current_fsr_value = 0;
+#endif
+
 #ifdef PIDTEMP
   float Kp=DEFAULT_Kp;
   float Ki=(DEFAULT_Ki*PID_dT);
@@ -786,6 +791,13 @@ void tp_init()
        DIDR2 |= 1<<(TEMP_BED_PIN - 8); 
     #endif
   #endif
+  #if defined(FSR_PROBE_PIN) && (FSR_PROBE_PIN > -1)
+    #if FSR_PROBE_PIN < 8
+       DIDR0 |= 1<<FSR_PROBE_PIN;
+    #else
+       DIDR2 |= 1<<(FSR_PROBE_PIN - 8); 
+    #endif
+  #endif
   
   // Use timer0 for temperature measurement
   // Interleave temperature interrupt with millies interrupt
@@ -1039,9 +1051,12 @@ ISR(TIMER0_COMPB_vect)
   static unsigned long raw_temp_1_value = 0;
   static unsigned long raw_temp_2_value = 0;
   static unsigned long raw_temp_bed_value = 0;
-  static unsigned char temp_state = 8;
+  static unsigned char temp_state = 10;
   static unsigned char pwm_count = (1 << SOFT_PWM_SCALE);
   static unsigned char soft_pwm_0;
+#ifdef FSR_BED_LEVELING
+  static unsigned long raw_fsr_value = 0;
+#endif
   #if (EXTRUDERS > 1) || defined(HEATERS_PARALLEL)
   static unsigned char soft_pwm_1;
   #endif
@@ -1178,10 +1193,28 @@ ISR(TIMER0_COMPB_vect)
       #if defined(TEMP_2_PIN) && (TEMP_2_PIN > -1)
         raw_temp_2_value += ADC;
       #endif
+      temp_state = 8;
+      break;
+    case 8: // Prepare FSR_PROBE_PIN
+      #if defined(FSR_PROBE_PIN) && (FSR_PROBE_PIN > -1)
+        #if FSR_PROBE_PIN > 7
+          ADCSRB = 1<<MUX5;
+        #else
+          ADCSRB = 0;
+        #endif
+        ADMUX = ((1 << REFS0) | (FSR_PROBE_PIN & 0x07));
+        ADCSRA |= 1<<ADSC; // Start conversion
+      #endif
+      temp_state = 9;
+      break;
+    case 9: // Measure FSR_PROBE_PIN
+      #if defined(FSR_PROBE_PIN) && (FSR_PROBE_PIN > -1)
+        raw_fsr_value += ADC;
+      #endif
       temp_state = 0;
       temp_count++;
       break;
-    case 8: //Startup, delay initial temp reading a tiny bit so the hardware can settle.
+    case 10: //Startup, delay initial temp reading a tiny bit so the hardware can settle.
       temp_state = 0;
       break;
 //    default:
@@ -1205,6 +1238,9 @@ ISR(TIMER0_COMPB_vect)
       current_temperature_raw[2] = raw_temp_2_value;
 #endif
       current_temperature_bed_raw = raw_temp_bed_value;
+#ifdef FSR_BED_LEVELING
+      current_fsr_value = raw_fsr_value;
+#endif
     }
     
     temp_meas_ready = true;
@@ -1213,6 +1249,9 @@ ISR(TIMER0_COMPB_vect)
     raw_temp_1_value = 0;
     raw_temp_2_value = 0;
     raw_temp_bed_value = 0;
+#ifdef FSR_BED_LEVELING
+    raw_fsr_value = 0;
+#endif
 
 #if HEATER_0_RAW_LO_TEMP > HEATER_0_RAW_HI_TEMP
     if(current_temperature_raw[0] <= maxttemp_raw[0]) {

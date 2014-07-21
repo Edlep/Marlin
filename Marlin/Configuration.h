@@ -434,7 +434,7 @@ const bool Z_MAX_ENDSTOP_INVERTING = true; // set to true to invert the logic of
   
   #define FSR_BED_LEVELING
   #define FSR_PROBE_PIN TEMP_1_PIN // Must be an analog pin
-  #define FSR_PROBE_THRESHOLD 5// Probe for a variation of 5%
+  #define FSR_PROBE_THRESHOLD 5 // Probe for a variation of x%
 
   #ifdef ACCURATE_BED_LEVELING
     #define ACCURATE_BED_LEVELING_POINTS 5

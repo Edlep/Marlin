@@ -44,6 +44,10 @@ extern float current_temperature_bed;
 #ifdef TEMP_SENSOR_1_AS_REDUNDANT
   extern float redundant_temperature;
 #endif
+  
+#ifdef FSR_BED_LEVELING
+extern int current_fsr_value;
+#endif
 
 #if defined(CONTROLLERFAN_PIN) && CONTROLLERFAN_PIN > -1
   extern unsigned char soft_pwm_bed;
@@ -119,6 +123,13 @@ FORCE_INLINE bool isCoolingHotend(uint8_t extruder) {
 FORCE_INLINE bool isCoolingBed() {
   return target_temperature_bed < current_temperature_bed;
 };
+
+#ifdef FSR_BED_LEVELING
+FORCE_INLINE int fsrValue() 
+{
+  return current_fsr_value;
+};
+#endif
 
 #define degHotend0() degHotend(0)
 #define degTargetHotend0() degTargetHotend(0)

@@ -895,43 +895,38 @@ static void set_bed_level_equation(float z_at_xLeft_yFront, float z_at_xRight_yF
 }
 #endif // ACCURATE_BED_LEVELING
 
-
-// Making accurate ADC readings
-// From https://code.google.com/p/tinkerit/wiki/SecretVoltmeter
-long readVcc() 
-{ 
-    long result; 
-    // Read 1.1V reference against AVcc 
-    ADMUX = _BV(REFS0) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1); 
-    delay(2); 
-    // Wait for Vref to settle 
-    ADCSRA |= _BV(ADSC); 
-    // Convert while (bit_is_set(ADCSRA,ADSC)); 
-    result = ADCL; 
-    result |= ADCH<<8; 
-    result = 1125300L / result; 
-    // Back-calculate AVcc in mV 
-    return result; 
-}
+#define MEAN_PROBE_NBR_VALUES 10
+int mean_probe_values[MEAN_PROBE_NBR_VALUES];
 
 // Readings are sometimes unstable, so calculate a mean value
 static float mean_probe_read(uint8_t nruns)
 {
-    float retVal = 0., newVal;
-    int n = 0;
-    for (int i=0;i<nruns;i++)
+    float newVal, meanVal = 0., retVal = 0.;
+    int nVals = 0;
+    
+    for (int i=0;i<MEAN_PROBE_NBR_VALUES;i++)
     {
       newVal = analogRead(FSR_PROBE_PIN);
-      if (newVal<1023)
-      {
-	retVal += newVal;
-	n++;
-      }
-      delay(1);
+      mean_probe_values[i] = newVal;
+      meanVal += newVal;
+      
+//       delay(1);
     }
-    if (n!=0)
-      return retVal/n;
-    else return -1;
+    meanVal /= MEAN_PROBE_NBR_VALUES;
+    SERIAL_PROTOCOLLN(meanVal);
+    // Filter values
+    for (int i=0;i<MEAN_PROBE_NBR_VALUES;i++)
+    {
+      if(fabs(mean_probe_values[i]-meanVal)<100)
+      {
+	retVal += mean_probe_values[i];
+	nVals++;
+      }
+    }  
+    if (nVals==0)
+      return -1;
+    else
+      return retVal/nVals;
 }
 
 // Readings are sometimes unstable, so read several times
@@ -942,6 +937,7 @@ static bool probe_really_touching(float threshold, uint8_t nreads)
       float fsr_value = analogRead(FSR_PROBE_PIN);
       if (fsr_value > threshold)
         return false;
+//       delay(1);
     }
     return true;
 }
@@ -951,14 +947,14 @@ static void run_z_probe() {
 
 #ifdef DELTA
   #ifdef FSR_BED_LEVELING
-    feedrate = XY_TRAVEL_SPEED * 0.75; //mm/min
+//     feedrate = XY_TRAVEL_SPEED; // * 0.75; //mm/min
     float step = 0.05;
     int direction = -1;
 
-    float analog_fsr_untouched = fsrValue(); // mean_probe_read(15);
+    float analog_fsr_untouched = mean_probe_read(20);
     if (analog_fsr_untouched==-1)
       analog_fsr_untouched = 1023;
-    float threshold = analog_fsr_untouched * (1. - FSR_PROBE_THRESHOLD/100.);
+    float threshold = analog_fsr_untouched - FSR_PROBE_DELTA_VALUE;
     float fsr_value;
     
     SERIAL_PROTOCOLPGM("Z_MIN init: ");
@@ -966,9 +962,9 @@ static void run_z_probe() {
     
     for(;;)
     {
-      fsr_value = fsrValue(); //analogRead(FSR_PROBE_PIN);
+      fsr_value = analogRead(FSR_PROBE_PIN);
       if (fsr_value < threshold)
-//        if (probe_really_touching(threshold, 4))
+       if (probe_really_touching(threshold, 3))
         break;
         
 //      SERIAL_PROTOCOLPGM("Z_MIN: ");
@@ -981,14 +977,32 @@ static void run_z_probe() {
    SERIAL_PROTOCOLPGM("Stop val: ");
    SERIAL_PROTOCOLLN(fsr_value);
 //    return;
-    while (step > 0.005) {
-      step *= 0.8;
-      feedrate *= 0.8;
-      direction = (fsr_value > threshold) ? 1 : -1;
-      destination[Z_AXIS] += step * direction;
-      prepare_move_raw();
-      st_synchronize();
-    }
+//       destination[Z_AXIS] -= 20  * step * direction;
+//       prepare_move_raw();
+//       st_synchronize();
+      
+//     for(;;)
+//     {
+//       fsr_value = analogRead(FSR_PROBE_PIN);
+//       if (fsr_value > relax_threshold)
+//        if (mean_probe_read(5) > threshold)
+//         break;
+//         
+//      SERIAL_PROTOCOLPGM("relax: ");
+//     SERIAL_PROTOCOLLN(fsr_value);
+//      delay(1); 
+// //       destination[Z_AXIS] -= step * direction;
+// //       prepare_move_raw();
+// //       st_synchronize();
+//     }
+//     while (step > 0.005) {
+//       step *= 0.8;
+//       feedrate *= 0.8;
+//       direction = (fsr_value > threshold) ? 1 : -1;
+//       destination[Z_AXIS] += step * direction;
+//       prepare_move_raw();
+//       st_synchronize();
+//     }
   #else // FSR_BED_LEVELING
     enable_endstops(true);
     float start_z = current_position[Z_AXIS];

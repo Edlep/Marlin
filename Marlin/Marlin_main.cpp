@@ -207,6 +207,7 @@ bool axis_known_position[3] = {false, false, false};
 float zprobe_zoffset;
 bool zprobe_engaged = false;
 bool bed_level_calculated = false;
+bool all_axis_reset = false;
 
 // Extruder offset
 #if EXTRUDERS > 1
@@ -909,11 +910,9 @@ static float mean_probe_read(uint8_t nruns)
       newVal = analogRead(FSR_PROBE_PIN);
       mean_probe_values[i] = newVal;
       meanVal += newVal;
-      
-//       delay(1);
     }
     meanVal /= MEAN_PROBE_NBR_VALUES;
-    SERIAL_PROTOCOLLN(meanVal);
+//     SERIAL_PROTOCOLLN(meanVal);
     // Filter values
     for (int i=0;i<MEAN_PROBE_NBR_VALUES;i++)
     {
@@ -953,11 +952,15 @@ static void run_z_probe() {
 
     float analog_fsr_untouched = mean_probe_read(20);
     if (analog_fsr_untouched==-1)
+    {
+      SERIAL_PROTOCOLLN("WARNING: possible wrong FSR setup");
       analog_fsr_untouched = 1023;
+    }
+    
     float threshold = analog_fsr_untouched - FSR_PROBE_DELTA_VALUE;
     float fsr_value;
     
-    SERIAL_PROTOCOLPGM("Z_MIN init: ");
+    SERIAL_PROTOCOLPGM("FSR init value: ");
     SERIAL_PROTOCOLLN(analog_fsr_untouched);
     
     for(;;)
@@ -974,35 +977,8 @@ static void run_z_probe() {
       prepare_move_raw();
       st_synchronize();
     }
-   SERIAL_PROTOCOLPGM("Stop val: ");
+   SERIAL_PROTOCOLPGM("FSR stop value: ");
    SERIAL_PROTOCOLLN(fsr_value);
-//    return;
-//       destination[Z_AXIS] -= 20  * step * direction;
-//       prepare_move_raw();
-//       st_synchronize();
-      
-//     for(;;)
-//     {
-//       fsr_value = analogRead(FSR_PROBE_PIN);
-//       if (fsr_value > relax_threshold)
-//        if (mean_probe_read(5) > threshold)
-//         break;
-//         
-//      SERIAL_PROTOCOLPGM("relax: ");
-//     SERIAL_PROTOCOLLN(fsr_value);
-//      delay(1); 
-// //       destination[Z_AXIS] -= step * direction;
-// //       prepare_move_raw();
-// //       st_synchronize();
-//     }
-//     while (step > 0.005) {
-//       step *= 0.8;
-//       feedrate *= 0.8;
-//       direction = (fsr_value > threshold) ? 1 : -1;
-//       destination[Z_AXIS] += step * direction;
-//       prepare_move_raw();
-//       st_synchronize();
-//     }
   #else // FSR_BED_LEVELING
     enable_endstops(true);
     float start_z = current_position[Z_AXIS];
@@ -1444,14 +1420,18 @@ void process_commands()
       break;
       #endif //FWRETRACT
     case 28: //G28 Home all Axis one at a time
+      if (code_seen('R'))
+      {
 #ifdef ENABLE_AUTO_BED_LEVELING
-//      plan_bed_level_matrix.set_to_identity();  //Reset the plane ("erase" all leveling data)
+	plan_bed_level_matrix.set_to_identity();  //Reset the plane ("erase" all leveling data)
 #endif //ENABLE_AUTO_BED_LEVELING
 
 #ifdef NONLINEAR_BED_LEVELING
-//      reset_bed_level();
+	reset_bed_level();
 #endif //NONLINEAR_BED_LEVELING
-
+	SERIAL_PROTOCOLLN("Leveling data reset");
+      }
+      
       saved_feedrate = feedrate;
       saved_feedmultiply = feedmultiply;
       feedmultiply = 100;
@@ -1655,11 +1635,19 @@ void process_commands()
       feedmultiply = saved_feedmultiply;
       previous_millis_cmd = millis();
       endstops_hit_on_purpose();
+      
+      all_axis_reset = true;
+      
       break;
 
 #ifdef ENABLE_AUTO_BED_LEVELING
     case 29: // G29 Detailed Z-Probe, probes the bed at 3 or more points.
         {
+	    if (!all_axis_reset)
+	    {
+	      SERIAL_PROTOCOLLN("It isn't safe to run Z-probe without resetting all axis. Run G28 before.");
+	      break;
+	    }
             #if Z_MIN_PIN == -1
             #error "You must have a Z_MIN endstop in order to enable Auto Bed Leveling feature!!! Z_MIN_PIN must point to a valid hardware pin."
             #endif
@@ -1828,6 +1816,12 @@ void process_commands()
 
     case 30: // G30 Single Z Probe
         {
+	    if (!all_axis_reset)
+	    {
+	      SERIAL_PROTOCOLLN("It isn't safe to run Z-probe without resetting all axis. Run G28 before.");
+	      break;
+	    }
+	    
 	    if (!zprobe_engaged)
 	      engage_z_probe(); // Engage Z Servo endstop if available
 

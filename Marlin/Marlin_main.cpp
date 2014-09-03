@@ -900,32 +900,36 @@ static void set_bed_level_equation(float z_at_xLeft_yFront, float z_at_xRight_yF
 int mean_probe_values[MEAN_PROBE_NBR_VALUES];
 
 // Readings are sometimes unstable, so calculate a mean value
-static float mean_probe_read(uint8_t nruns)
+static float mean_probe_read(uint8_t nruns, int maxRange=5)
 {
-    float newVal, meanVal = 0., retVal = 0.;
+    float newVal, meanVal = 0.;
     int nVals = 0;
+    int nErr = 0;
+    int minVal = 1023, maxVal = 0;
     
-    for (int i=0;i<MEAN_PROBE_NBR_VALUES;i++)
+    while (nVals<nruns)
     {
       newVal = analogRead(FSR_PROBE_PIN);
-      mean_probe_values[i] = newVal;
-      meanVal += newVal;
-    }
-    meanVal /= MEAN_PROBE_NBR_VALUES;
-//     SERIAL_PROTOCOLLN(meanVal);
-    // Filter values
-    for (int i=0;i<MEAN_PROBE_NBR_VALUES;i++)
-    {
-      if(fabs(mean_probe_values[i]-meanVal)<100)
+      if (newVal>900)
       {
-	retVal += mean_probe_values[i];
-	nVals++;
+	nErr++;
+	if (nErr>nruns/2)
+	  return -2;
       }
-    }  
-    if (nVals==0)
+      else
+      {
+	nVals++;
+	meanVal += newVal;
+	if (newVal>maxVal)
+	  maxVal = newVal;
+	if (newVal<minVal)
+	  minVal = newVal;
+      }
+      delay(1);
+    }
+    if (maxVal-minVal>maxRange)
       return -1;
-    else
-      return retVal/nVals;
+    return meanVal /  nVals;
 }
 
 // Readings are sometimes unstable, so read several times
@@ -950,8 +954,13 @@ static void run_z_probe() {
     float step = 0.05;
     int direction = -1;
 
-    float analog_fsr_untouched = mean_probe_read(20);
-    if (analog_fsr_untouched==-1)
+    float analog_fsr_untouched;
+    do 
+    {
+      analog_fsr_untouched = mean_probe_read(20);
+    } while (analog_fsr_untouched<0);
+    
+    if (analog_fsr_untouched==-2)
     {
       SERIAL_PROTOCOLLN("WARNING: possible wrong FSR setup");
       analog_fsr_untouched = 1023;
@@ -3285,7 +3294,11 @@ void process_commands()
       #endif //else DUAL_X_CARRIAGE
         plan_set_position(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS]);
         // Move to the old position if 'F' was in the parameters
+      #ifdef DUAL_X_CARRIAGE
         if(make_move && Stopped == false) {
+      #else // DUAL_X_CARRIAGE
+        if(Stopped == false) {
+      #endif // DUAL_X_CARRIAGE
            prepare_move();
         }
       }

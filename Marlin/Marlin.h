@@ -178,6 +178,11 @@ void get_coordinates();
 void calculate_delta(float cartesian[3]);
 void adjust_delta(float cartesian[3]);
 extern float delta[3];
+extern float endstop_adj[3];
+extern float delta_radius;
+extern float delta_diagonal_rod;
+extern float delta_segments_per_second;
+void recalc_delta_settings(float radius, float diagonal_rod);
 #endif
 void prepare_move_raw();
 void prepare_move();

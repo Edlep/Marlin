@@ -1312,7 +1312,7 @@ int dqrsl ( double a[], int lda, int n, int k, double qraux[], double y[],
     can be replaced by dummy variables in the calling program.
     To save storage, the user may in some cases use the same
     array for different parameters in the calling sequence.  A
-    frequently occuring example is when one wishes to compute
+    frequently occurring example is when one wishes to compute
     any of B, RSD, or AB and does not need Y or QTY.  In this
     case one may identify Y, QTY, and one of B, RSD, or AB, while
     providing separate arrays for anything else that is to be

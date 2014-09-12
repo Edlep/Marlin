@@ -28,7 +28,7 @@
 #endif
 
 // public functions
-void tp_init();  //initialise the heating
+void tp_init();  //initialize the heating
 void manage_heater(); //it is critical that this is called periodically.
 
 // low level conversion routines
@@ -44,7 +44,6 @@ extern float current_temperature_bed;
 #ifdef TEMP_SENSOR_1_AS_REDUNDANT
   extern float redundant_temperature;
 #endif
-  
 
 #if defined(CONTROLLERFAN_PIN) && CONTROLLERFAN_PIN > -1
   extern unsigned char soft_pwm_bed;
@@ -121,7 +120,6 @@ FORCE_INLINE bool isCoolingBed() {
   return target_temperature_bed < current_temperature_bed;
 };
 
-
 #define degHotend0() degHotend(0)
 #define degTargetHotend0() degTargetHotend(0)
 #define setTargetHotend0(_celsius) setTargetHotend((_celsius), 0)
@@ -155,6 +153,17 @@ int getHeaterPower(int heater);
 void disable_heater();
 void setWatch();
 void updatePID();
+
+#if defined(THERMAL_RUNAWAY_PROTECTION_PERIOD) && THERMAL_RUNAWAY_PROTECTION_PERIOD > 0
+void thermal_runaway_protection(int *state, unsigned long *timer, float temperature, float target_temperature, int heater_id, int period_seconds, int hysteresis_degc);
+static int thermal_runaway_state_machine[3]; // = {0,0,0};
+static unsigned long thermal_runaway_timer[3]; // = {0,0,0};
+static bool thermal_runaway = false;
+  #if TEMP_SENSOR_BED != 0
+    static int thermal_runaway_bed_state_machine;
+    static unsigned long thermal_runaway_bed_timer;
+  #endif
+#endif
 
 FORCE_INLINE void autotempShutdown(){
  #ifdef AUTOTEMP

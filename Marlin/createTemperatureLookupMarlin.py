@@ -98,7 +98,8 @@ def main(argv):
     
     try:
         opts, args = getopt.getopt(argv, "h", ["help", "rp=", "t1=", "t2=", "t3=", "num-temps="])
-    except getopt.GetoptError:
+    except getopt.GetoptError as err:
+        print  str(err)
         usage()
         sys.exit(2)
         

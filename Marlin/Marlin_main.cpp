@@ -2334,7 +2334,7 @@ void process_commands()
 		do_blocking_move_to( X_probe_location, Y_probe_location, Z_start_location); // Make sure we are at the probe location
 
 		if ( n_legs)  {
-		double radius=0.0, theta=0.0, x_sweep, y_sweep;
+		double radius=0.0, theta=0.0;
 		int rotational_direction, l;
 
 			rotational_direction = (unsigned long) millis() & 0x0001;			// clockwise or counter clockwise

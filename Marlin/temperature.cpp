@@ -34,6 +34,9 @@
 #include "temperature.h"
 #include "watchdog.h"
 
+#include "Sd2PinMap.h"
+
+
 //===========================================================================
 //=============================public variables============================
 //===========================================================================
@@ -47,8 +50,6 @@ float current_temperature_bed = 0.0;
   int redundant_temperature_raw = 0;
   float redundant_temperature = 0.0;
 #endif
-
-
 #ifdef PIDTEMP
   float Kp=DEFAULT_Kp;
   float Ki=(DEFAULT_Ki*PID_dT);
@@ -181,7 +182,7 @@ void PID_autotune(float temp, int extruder, int ncycles)
   float Kp, Ki, Kd;
   float max = 0, min = 10000;
 
-  if ((extruder > EXTRUDERS)
+  if ((extruder >= EXTRUDERS)
   #if (TEMP_BED_PIN <= -1)
        ||(extruder < 0)
   #endif
@@ -252,7 +253,7 @@ void PID_autotune(float temp, int extruder, int ncycles)
               Kp = 0.6*Ku;
               Ki = 2*Kp/Tu;
               Kd = Kp*Tu/8;
-              SERIAL_PROTOCOLLNPGM(" Clasic PID ");
+              SERIAL_PROTOCOLLNPGM(" Classic PID ");
               SERIAL_PROTOCOLPGM(" Kp: "); SERIAL_PROTOCOLLN(Kp);
               SERIAL_PROTOCOLPGM(" Ki: "); SERIAL_PROTOCOLLN(Ki);
               SERIAL_PROTOCOLPGM(" Kd: "); SERIAL_PROTOCOLLN(Kd);
@@ -260,14 +261,14 @@ void PID_autotune(float temp, int extruder, int ncycles)
               Kp = 0.33*Ku;
               Ki = Kp/Tu;
               Kd = Kp*Tu/3;
-              SERIAL_PROTOCOLLNPGM(" Some overshoot ")
+              SERIAL_PROTOCOLLNPGM(" Some overshoot ");
               SERIAL_PROTOCOLPGM(" Kp: "); SERIAL_PROTOCOLLN(Kp);
               SERIAL_PROTOCOLPGM(" Ki: "); SERIAL_PROTOCOLLN(Ki);
               SERIAL_PROTOCOLPGM(" Kd: "); SERIAL_PROTOCOLLN(Kd);
               Kp = 0.2*Ku;
               Ki = 2*Kp/Tu;
               Kd = Kp*Tu/3;
-              SERIAL_PROTOCOLLNPGM(" No overshoot ")
+              SERIAL_PROTOCOLLNPGM(" No overshoot ");
               SERIAL_PROTOCOLPGM(" Kp: "); SERIAL_PROTOCOLLN(Kp);
               SERIAL_PROTOCOLPGM(" Ki: "); SERIAL_PROTOCOLLN(Ki);
               SERIAL_PROTOCOLPGM(" Kd: "); SERIAL_PROTOCOLLN(Kd);
@@ -308,7 +309,7 @@ void PID_autotune(float temp, int extruder, int ncycles)
       return;
     }
     if(cycles > ncycles) {
-      SERIAL_PROTOCOLLNPGM("PID Autotune finished! Put the Kp, Ki and Kd constants into Configuration.h");
+      SERIAL_PROTOCOLLNPGM("PID Autotune finished! Put the last Kp, Ki and Kd constants from above into Configuration.h");
       return;
     }
     lcd_update();
@@ -418,6 +419,10 @@ void manage_heater()
   for(int e = 0; e < EXTRUDERS; e++) 
   {
 
+  #if defined(THERMAL_RUNAWAY_PROTECTION_PERIOD) && THERMAL_RUNAWAY_PROTECTION_PERIOD > 0
+    thermal_runaway_protection(&thermal_runaway_state_machine[e], &thermal_runaway_timer[e], current_temperature[e], target_temperature[e], e, THERMAL_RUNAWAY_PROTECTION_PERIOD, THERMAL_RUNAWAY_PROTECTION_HYSTERESIS);
+  #endif
+
   #ifdef PIDTEMP
     pid_input = current_temperature[e];
 
@@ -451,7 +456,8 @@ void manage_heater()
           pid_output = constrain(target_temperature[e], 0, PID_MAX);
     #endif //PID_OPENLOOP
     #ifdef PID_DEBUG
-    SERIAL_ECHO_START(" PIDDEBUG ");
+    SERIAL_ECHO_START;
+    SERIAL_ECHO(" PID_DEBUG ");
     SERIAL_ECHO(e);
     SERIAL_ECHO(": Input ");
     SERIAL_ECHO(pid_input);
@@ -527,6 +533,10 @@ void manage_heater()
 
   #if TEMP_SENSOR_BED != 0
   
+    #if defined(THERMAL_RUNAWAY_PROTECTION_PERIOD) && THERMAL_RUNAWAY_PROTECTION_PERIOD > 0
+      thermal_runaway_protection(&thermal_runaway_bed_state_machine, &thermal_runaway_bed_timer, current_temperature_bed, target_temperature_bed, 9, THERMAL_RUNAWAY_PROTECTION_BED_PERIOD, THERMAL_RUNAWAY_PROTECTION_BED_HYSTERESIS);
+    #endif
+
   #ifdef PIDTEMPBED
     pid_input = current_temperature_bed;
 
@@ -610,6 +620,7 @@ static float analog2temp(int raw, uint8_t e) {
       SERIAL_ERROR((int)e);
       SERIAL_ERRORLNPGM(" - Invalid extruder number !");
       kill();
+      return 0.0;
   } 
   #ifdef HEATER_0_USES_MAX6675
     if (e == 0)
@@ -740,18 +751,22 @@ void tp_init()
 
   #ifdef HEATER_0_USES_MAX6675
     #ifndef SDSUPPORT
-      SET_OUTPUT(MAX_SCK_PIN);
-      WRITE(MAX_SCK_PIN,0);
+      SET_OUTPUT(SCK_PIN);
+      WRITE(SCK_PIN,0);
     
-      SET_OUTPUT(MAX_MOSI_PIN);
-      WRITE(MAX_MOSI_PIN,1);
+      SET_OUTPUT(MOSI_PIN);
+      WRITE(MOSI_PIN,1);
     
-      SET_INPUT(MAX_MISO_PIN);
-      WRITE(MAX_MISO_PIN,1);
+      SET_INPUT(MISO_PIN);
+      WRITE(MISO_PIN,1);
     #endif
+    /* Using pinMode and digitalWrite, as that was the only way I could get it to compile */
     
-    SET_OUTPUT(MAX6675_SS);
-    WRITE(MAX6675_SS,1);
+    //Have to toggle SD card CS pin to low first, to enable firmware to talk with SD card
+	pinMode(SS_PIN, OUTPUT);
+	digitalWrite(SS_PIN,0);  
+	pinMode(MAX6675_SS, OUTPUT);
+	digitalWrite(MAX6675_SS,1);
   #endif
 
   // Set analog inputs
@@ -896,6 +911,66 @@ void setWatch()
 #endif 
 }
 
+#if defined(THERMAL_RUNAWAY_PROTECTION_PERIOD) && THERMAL_RUNAWAY_PROTECTION_PERIOD > 0
+void thermal_runaway_protection(int *state, unsigned long *timer, float temperature, float target_temperature, int heater_id, int period_seconds, int hysteresis_degc)
+{
+/*
+      SERIAL_ECHO_START;
+      SERIAL_ECHO("Thermal Thermal Runaway Running. Heater ID:");
+      SERIAL_ECHO(heater_id);
+      SERIAL_ECHO(" ;  State:");
+      SERIAL_ECHO(*state);
+      SERIAL_ECHO(" ;  Timer:");
+      SERIAL_ECHO(*timer);
+      SERIAL_ECHO(" ;  Temperature:");
+      SERIAL_ECHO(temperature);
+      SERIAL_ECHO(" ;  Target Temp:");
+      SERIAL_ECHO(target_temperature);
+      SERIAL_ECHOLN("");    
+*/
+  if ((target_temperature == 0) || thermal_runaway)
+  {
+    *state = 0;
+    *timer = 0;
+    return;
+  }
+  switch (*state)
+  {
+    case 0: // "Heater Inactive" state
+      if (target_temperature > 0) *state = 1;
+      break;
+    case 1: // "First Heating" state
+      if (temperature >= target_temperature) *state = 2;
+      break;
+    case 2: // "Temperature Stable" state
+      if (temperature >= (target_temperature - hysteresis_degc))
+      {
+        *timer = millis();
+      } 
+      else if ( (millis() - *timer) > period_seconds*1000)
+      {
+        SERIAL_ERROR_START;
+        SERIAL_ERRORLNPGM("Thermal Runaway, system stopped! Heater_ID: ");
+        SERIAL_ERRORLN((int)heater_id);
+        LCD_ALERTMESSAGEPGM("THERMAL RUNAWAY");
+        thermal_runaway = true;
+        while(1)
+        {
+          disable_heater();
+          disable_x();
+          disable_y();
+          disable_z();
+          disable_e0();
+          disable_e1();
+          disable_e2();
+          manage_heater();
+          lcd_update();
+        }
+      }
+      break;
+  }
+}
+#endif
 
 void disable_heater()
 {
@@ -977,7 +1052,7 @@ void bed_max_temp_error(void) {
 
 #ifdef HEATER_0_USES_MAX6675
 #define MAX6675_HEAT_INTERVAL 250
-long max6675_previous_millis = -HEAT_INTERVAL;
+long max6675_previous_millis = MAX6675_HEAT_INTERVAL;
 int max6675_temp = 2000;
 
 int read_max6675()

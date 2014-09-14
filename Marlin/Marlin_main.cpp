@@ -3208,6 +3208,63 @@ void process_commands()
   else if(code_seen('T'))
   {
     tmp_extruder = code_value();
+<<<<<<< Updated upstream
+=======
+  #ifdef SINGLE_NOZZLE_MULTI_EXTRUDER
+    if(tmp_extruder >= SNME_EXTRUDERS) 
+    {
+      SERIAL_ECHO_START;
+      SERIAL_ECHO("T");
+      SERIAL_ECHO(tmp_extruder);
+      SERIAL_ECHOLN(MSG_INVALID_EXTRUDER);
+    }
+    else if (tmp_extruder != snme_active_extruder)
+    {
+	// Save current position to return to after applying extruder offset
+//         memcpy(destination, current_position, sizeof(destination));
+	
+//    SERIAL_PROTOCOLPGM("curr E pos: ");
+//    SERIAL_PROTOCOLLN(current_position[E_AXIS]);
+//    SERIAL_PROTOCOLPGM("curr E dest: ");
+//    SERIAL_PROTOCOLLN(destination[E_AXIS]);
+   
+// 	if(all_axis_reset) 
+// 	{
+// 	    destination[E_AXIS] = -SNME_FILAMENT_RETRACTION_LENGTH;
+// 	    prepare_move();
+// 	    st_synchronize();
+// 	current_position[E_AXIS] = 0;
+// 	}
+	
+	
+	snme_active_extruder = tmp_extruder;
+// 	if(Stopped == true)
+	  current_position[E_AXIS] *= axis_steps_per_unit[3];
+	
+	float tmp1[] = DEFAULT_AXIS_STEPS_PER_UNIT;
+	if (tmp_extruder == 0)
+	  axis_steps_per_unit[3] = tmp1[3];
+	else if (tmp_extruder == 1)
+	  axis_steps_per_unit[3] = SNME_E1_AXIS_STEPS_PER_UNIT;
+	
+// 	if(Stopped == true)
+	  current_position[E_AXIS] /= axis_steps_per_unit[3];
+	destination[E_AXIS] = current_position[E_AXIS];
+	
+// 	if(all_axis_reset) 
+// 	{
+// 	    destination[E_AXIS] = SNME_FILAMENT_RETRACTION_LENGTH;
+// 	    prepare_move();
+// 	    st_synchronize();
+// 	current_position[E_AXIS] = 0;
+// 	}
+	
+	SERIAL_ECHO_START;
+	SERIAL_ECHO(MSG_ACTIVE_EXTRUDER);
+	SERIAL_PROTOCOLLN((int)snme_active_extruder);
+    }
+  #else // SINGLE_NOZZLE_MULTI_EXTRUDER
+>>>>>>> Stashed changes
     if(tmp_extruder >= EXTRUDERS) {
       SERIAL_ECHO_START;
       SERIAL_ECHO("T");

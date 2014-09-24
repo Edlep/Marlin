@@ -122,7 +122,7 @@
 #define DELTA_RADIUS (DELTA_SMOOTH_ROD_OFFSET-DELTA_EFFECTOR_OFFSET-DELTA_CARRIAGE_OFFSET)
 
 // Print surface diameter/2 minus unreachable space (avoid collisions with vertical towers).
-#define DELTA_PRINTABLE_RADIUS 90.0
+#define DELTA_PRINTABLE_RADIUS 80.0
 
 // Effective X/Y positions of the three vertical towers.
 #define SIN_60 0.8660254037844386
@@ -172,14 +172,14 @@
 // 147 is Pt100 with 4k7 pullup
 // 110 is Pt100 with 1k pullup (non standard)
 
-#define TEMP_SENSOR_0 1
-#define TEMP_SENSOR_1 0
+#define TEMP_SENSOR_0 3
+#define TEMP_SENSOR_1 3
 #define TEMP_SENSOR_2 0
 #define TEMP_SENSOR_BED 1
 
 // Supplementary fans for extruders (see Configuration_adv.h)
 #define EXTRUDER_0_FAN_PIN FAN2_PIN 
-#define EXTRUDER_1_FAN_PIN -1 
+#define EXTRUDER_1_FAN_PIN FAN2_PIN
 
 // 
 // This makes temp sensor 1 a redundant sensor for sensor 0. If the temperatures difference between these sensors is to high the print will be aborted.
@@ -354,7 +354,7 @@ const bool Z_MAX_ENDSTOP_INVERTING = true; // set to true to invert the logic of
 #define INVERT_Y_DIR true    // for Mendel set to true, for Orca set to false
 #define INVERT_Z_DIR true    // for Mendel set to false, for Orca set to true
 #define INVERT_E0_DIR true   // for direct drive extruder v9 set to true, for geared extruder set to false
-#define INVERT_E1_DIR false   // for direct drive extruder v9 set to true, for geared extruder set to false
+#define INVERT_E1_DIR true   // for direct drive extruder v9 set to true, for geared extruder set to false
 #define INVERT_E2_DIR false   // for direct drive extruder v9 set to true, for geared extruder set to false
 
 // ENDSTOP SETTINGS:
@@ -393,7 +393,7 @@ const bool Z_MAX_ENDSTOP_INVERTING = true; // set to true to invert the logic of
   // these are the offsets to the probe relative to the extruder tip (Hotend - Probe)
   #define X_PROBE_OFFSET_FROM_EXTRUDER 0
   #define Y_PROBE_OFFSET_FROM_EXTRUDER 0
-  #define Z_PROBE_OFFSET_FROM_EXTRUDER 0.15
+  #define Z_PROBE_OFFSET_FROM_EXTRUDER 0.3
 
   #define Z_RAISE_BEFORE_HOMING 5       // (in mm) Raise Z before homing (G28) for Probe Clearance.
                                         // Be sure you have this distance over your Z_MAX_POS in case
@@ -401,7 +401,7 @@ const bool Z_MAX_ENDSTOP_INVERTING = true; // set to true to invert the logic of
   #define XY_TRAVEL_SPEED 8000         // X and Y axis travel speed between probes, in mm/min
 
   #define Z_RAISE_BEFORE_PROBING 10  //How much the extruder will be raised before traveling to the first probing point.
-  #define Z_RAISE_BETWEEN_PROBINGS 3  //How much the extruder will be raised when traveling from between next probing points
+  #define Z_RAISE_BETWEEN_PROBINGS 4  //How much the extruder will be raised when traveling from between next probing points
 
 
   //If defined, the Probe servo will be turned on only during movement and then turned off to avoid jerk
@@ -433,8 +433,8 @@ const bool Z_MAX_ENDSTOP_INVERTING = true; // set to true to invert the logic of
   #define ACCURATE_BED_LEVELING
   
   #define FSR_BED_LEVELING
-  #define FSR_PROBE_PIN TEMP_1_PIN // Must be an analog pin
-  #define FSR_PROBE_DELTA_VALUE 10 // Probe when the difference between the initial and the current FSR value is greater than DELTA_VALUE
+  #define FSR_PROBE_PIN TEMP_2_PIN // Must be an analog pin
+  #define FSR_PROBE_DELTA_VALUE 8 // Probe when the difference between the initial and the current FSR value is greater than DELTA_VALUE
 
   #ifdef ACCURATE_BED_LEVELING
     #define ACCURATE_BED_LEVELING_POINTS 5
@@ -481,6 +481,15 @@ const bool Z_MAX_ENDSTOP_INVERTING = true; // set to true to invert the logic of
 
 #define DEFAULT_ACCELERATION          3000    // X, Y, Z and E max acceleration in mm/s^2 for printing moves
 #define DEFAULT_RETRACT_ACCELERATION  3000   // X, Y, Z and E max acceleration in mm/s^2 for retracts
+
+#define ROTATING_NOZZLE_PLATFORM
+#ifdef ROTATING_NOZZLE_PLATFORM
+  #define RNP_STEP_PIN E2_STEP_PIN
+  #define RNP_DIR_PIN E2_DIR_PIN
+  #define RNP_ENABLE_PIN E2_ENABLE_PIN
+  
+  #define RNP_STOP_PIN X_MIN_PIN
+#endif // ROTATING_NOZZLE_PLATFORM
 
 // Offset of the extruders (uncomment if using more than one and relying on firmware to position when changing).
 // The offset has to be X=0, Y=0 for the extruder 0 hotend (default extruder).

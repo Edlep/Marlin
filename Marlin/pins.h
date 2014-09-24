@@ -2333,7 +2333,7 @@
 	#define X_STEP_PIN         58
 	#define X_DIR_PIN          57
 	#define X_ENABLE_PIN       59
-	#define X_MIN_PIN          -1 //37
+	#define X_MIN_PIN          37
 	#define X_MAX_PIN          40   //2 //Max endstops default to disabled "-1", set to commented value to enable.
 
 	#define Y_STEP_PIN         5 // A6
@@ -2373,8 +2373,8 @@
 	#define HEATER_1_PIN 8 
 	#define HEATER_2_PIN 9 
 	#define HEATER_BED_PIN 10 
- #define FAN_PIN 6
- #define FAN2_PIN 7
+ #define FAN_PIN 47 //7 //6
+ #define FAN2_PIN 6 //7
 // #define CONTROLLERFAN_PIN FAN2_PIN
  
  #if TEMP_SENSOR_0 == -1

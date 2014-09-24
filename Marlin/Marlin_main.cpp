@@ -209,6 +209,13 @@ bool zprobe_engaged = false;
 bool bed_level_calculated = false;
 bool all_axis_reset = false;
 
+#ifdef ROTATING_NOZZLE_PLATFORM
+float current_rnp_angle = -1;
+int current_rnp_nozzle = -1;
+void move_rnp_to(float angle);
+void select_rnp_nozzle(uint8_t e);
+#endif // ROTATING_NOZZLE_PLATFORM
+
 // Extruder offset
 #if EXTRUDERS > 1
 #ifndef DUAL_X_CARRIAGE
@@ -510,6 +517,12 @@ void setup()
   #ifdef DIGIPOT_I2C
     digipot_i2c_init();
   #endif
+    
+  #ifdef ROTATING_NOZZLE_PLATFORM
+    SET_OUTPUT(RNP_DIR_PIN);
+    SET_OUTPUT(RNP_STEP_PIN);
+    SET_OUTPUT(RNP_ENABLE_PIN);
+  #endif // ROTATING_NOZZLE_PLATFORM
 }
 
 
@@ -896,11 +909,52 @@ static void set_bed_level_equation(float z_at_xLeft_yFront, float z_at_xRight_yF
 }
 #endif // ACCURATE_BED_LEVELING
 
+#ifdef ROTATING_NOZZLE_PLATFORM
+int init_rnp()
+{
+    if (current_rnp_angle!=-1)
+      return 0;
+    
+    WRITE(RNP_ENABLE_PIN, LOW);
+    
+    int i;
+    for (i = 0; i<60000; i++)       // Iterate for 4000 microsteps.
+    {
+//       WRITE(RNP_DIR_PIN, READ(RNP_STOP_PIN));     // Set the direction.
+
+      if (!READ(RNP_STOP_PIN))
+	break;
+      
+      digitalWrite(RNP_STEP_PIN, LOW);  // This LOW to HIGH change is what creates the
+      digitalWrite(RNP_STEP_PIN, HIGH); // "Rising Edge" so the easydriver knows to when to step.
+      delayMicroseconds(50);      // This delay time is close to top speed for this
+    }                              // particular motor. Any faster the motor stalls.
+    SERIAL_PROTOCOLPGM("init val: ");
+    SERIAL_PROTOCOLLN(i);
+    
+    return 0;
+}
+void move_rnp_to(float angle)
+{
+    if (init_rnp()!=0)
+      return;
+    
+}
+void select_rnp_nozzle(uint8_t e)
+{
+    if (e==current_rnp_nozzle)
+      return;
+    
+    move_rnp_to(110);
+    current_rnp_nozzle = e;
+}
+#endif // ROTATING_NOZZLE_PLATFORM
+
 #define MEAN_PROBE_NBR_VALUES 10
 int mean_probe_values[MEAN_PROBE_NBR_VALUES];
 
 // Readings are sometimes unstable, so calculate a mean value
-static float mean_probe_read(uint8_t nruns, int maxRange=5)
+static float mean_probe_read(uint8_t nruns, int maxRange=max(FSR_PROBE_DELTA_VALUE/2, 2))
 {
     float newVal, meanVal = 0.;
     int nVals = 0;
@@ -3281,6 +3335,48 @@ void process_commands()
           active_extruder_parked = true;
           delayed_move_time = 0;
         }
+      #elif defined(DELTA)
+/*	float curPos[4];
+	memcpy(curPos, current_position, sizeof(curPos));
+        // Offset extruder (only by XY)
+        int i;
+	if (active_extruder==0)
+        for(i = 0; i < 2; i++) {
+           destination[i] = current_position[i] +
+                                 extruder_offset[i][active_extruder] -
+                                 extruder_offset[i][tmp_extruder];
+        }
+	else
+        for(i = 0; i < 2; i++) {
+           current_position[i] = current_position[i] -
+                                 extruder_offset[i][active_extruder] +
+                                 extruder_offset[i][tmp_extruder];
+        }
+        prepare_move_raw();
+	st_synchronize();
+	memcpy(current_position, curPos, sizeof(curPos));
+	memcpy(destination, curPos, sizeof(curPos));
+        // Set the new active extruder and position
+<<<<<<< Updated upstream
+        active_extruder = tmp_extruder;
+      #endif //else DUAL_X_CARRIAGE
+        plan_set_position(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS]);
+=======
+         active_extruder = tmp_extruder;
+	 
+	if (active_extruder==0)
+	 calculate_delta(current_position);
+	else
+	 calculate_delta(destination);
+          plan_set_position(delta[X_AXIS], delta[Y_AXIS], delta[Z_AXIS], current_position[E_AXIS]);
+// 	  calculate_delta(current_position); // change cartesian kinematic to delta kinematic;
+// 	  plan_buffer_line(delta[X_AXIS], delta[Y_AXIS], delta[Z_AXIS],
+//                    destination[E_AXIS], feedrate, active_extruder);
+// 	  memcpy(current_position, destination, sizeof(destination));
+// 	  prepare_move_raw();
+// 	  st_synchronize();
+	  //sent position to plan_set_position();
+// 	  plan_set_position(delta[X_AXIS], delta[Y_AXIS], delta[Z_AXIS], current_position[E_AXIS]);
       #else
         // Offset extruder (only by XY)
         int i;
@@ -3289,10 +3385,21 @@ void process_commands()
                                  extruder_offset[i][active_extruder] +
                                  extruder_offset[i][tmp_extruder];
         }
-        // Set the new active extruder and position
-        active_extruder = tmp_extruder;
-      #endif //else DUAL_X_CARRIAGE
-        plan_set_position(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS]);
+ */       // Set the new active extruder and position
+// 	pinMode(E2_ENABLE_PIN, OUTPUT);
+// 	digitalWrite(E2_ENABLE_PIN, HIGH);
+// 	pinMode(E2_DIR_PIN, OUTPUT);
+// 	pinMode(E2_STEP_PIN, OUTPUT);
+      #ifdef ROTATING_NOZZLE_PLATFORM
+	  select_rnp_nozzle(tmp_extruder);
+      #endif // ROTATING_NOZZLE_PLATFORM
+         active_extruder = tmp_extruder;
+      #endif // DUAL_X_CARRIAGE
+	 
+      #ifndef DELTA
+	  plan_set_position(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS]);
+      #endif
+>>>>>>> Stashed changes
         // Move to the old position if 'F' was in the parameters
       #ifdef DUAL_X_CARRIAGE
         if(make_move && Stopped == false) {
@@ -3359,6 +3466,12 @@ void get_coordinates()
     next_feedrate = code_value();
     if(next_feedrate > 0.0) feedrate = next_feedrate;
   }
+  #ifdef ROTATING_NOZZLE_PLATFORM
+  if(code_seen('R')) 
+  {
+    move_rnp_to(code_value());
+  }
+  #endif // ROTATING_NOZZLE_PLATFORM
   #ifdef FWRETRACT
   if(autoretract_enabled)
   if( !(seen[X_AXIS] || seen[Y_AXIS] || seen[Z_AXIS]) && seen[E_AXIS])
@@ -3452,15 +3565,15 @@ void calculate_delta(float cartesian[3])
                        - sq(DELTA_TOWER3_X-cartesian[X_AXIS])
                        - sq(DELTA_TOWER3_Y-cartesian[Y_AXIS])
                        ) + cartesian[Z_AXIS];
-  /*
-  SERIAL_ECHOPGM("cartesian x="); SERIAL_ECHO(cartesian[X_AXIS]);
-  SERIAL_ECHOPGM(" y="); SERIAL_ECHO(cartesian[Y_AXIS]);
-  SERIAL_ECHOPGM(" z="); SERIAL_ECHOLN(cartesian[Z_AXIS]);
-
-  SERIAL_ECHOPGM("delta x="); SERIAL_ECHO(delta[X_AXIS]);
-  SERIAL_ECHOPGM(" y="); SERIAL_ECHO(delta[Y_AXIS]);
-  SERIAL_ECHOPGM(" z="); SERIAL_ECHOLN(delta[Z_AXIS]);
-  */
+  
+//   SERIAL_ECHOPGM("cartesian x="); SERIAL_ECHO(cartesian[X_AXIS]);
+//   SERIAL_ECHOPGM(" y="); SERIAL_ECHO(cartesian[Y_AXIS]);
+//   SERIAL_ECHOPGM(" z="); SERIAL_ECHOLN(cartesian[Z_AXIS]);
+// 
+//   SERIAL_ECHOPGM("delta x="); SERIAL_ECHO(delta[X_AXIS]);
+//   SERIAL_ECHOPGM(" y="); SERIAL_ECHO(delta[Y_AXIS]);
+//   SERIAL_ECHOPGM(" z="); SERIAL_ECHOLN(delta[Z_AXIS]);
+  
 }
 
 #ifdef ACCURATE_BED_LEVELING

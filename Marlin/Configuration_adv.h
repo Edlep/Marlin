@@ -79,7 +79,7 @@
 #define EXTRUDER_1_AUTO_FAN_PIN   EXTRUDER_1_FAN_PIN
 #define EXTRUDER_2_AUTO_FAN_PIN   -1
 #define EXTRUDER_AUTO_FAN_TEMPERATURE 50
-#define EXTRUDER_AUTO_FAN_SPEED   255  // == full speed
+#define EXTRUDER_AUTO_FAN_SPEED  255  // == full speed
 
 
 //===========================================================================

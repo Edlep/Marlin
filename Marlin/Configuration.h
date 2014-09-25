@@ -84,7 +84,7 @@
 // #define MACHINE_UUID "00000000-0000-0000-0000-000000000000"
 
 // This defines the number of extruders
-#define EXTRUDERS 1
+#define EXTRUDERS 2
 
 //// The following define selects which power supply you have. Please choose the one that matches your setup
 // 1 = ATX
@@ -484,11 +484,21 @@ const bool Z_MAX_ENDSTOP_INVERTING = true; // set to true to invert the logic of
 
 #define ROTATING_NOZZLE_PLATFORM
 #ifdef ROTATING_NOZZLE_PLATFORM
+  // PINS
   #define RNP_STEP_PIN E2_STEP_PIN
   #define RNP_DIR_PIN E2_DIR_PIN
   #define RNP_ENABLE_PIN E2_ENABLE_PIN
   
-  #define RNP_STOP_PIN X_MIN_PIN
+  #define RNP_ENDSTOP_PIN X_MIN_PIN
+  
+  #define INVERT_RNP_DIR true 
+  const bool RNP_ENDSTOP_INVERTING = false; // set to true to invert the logic of the endstop.
+  
+  #define RNP_FULL_STEPS_PER_ROTATION 200
+  #define RNP_MICROSTEPS 32
+  #define RNP_PLATFORM_TEETH 76
+  #define RNP_PULLEY_TEETH 20
+  #define RNP_STEPS (RNP_FULL_STEPS_PER_ROTATION * RNP_MICROSTEPS / 360. * double(RNP_PLATFORM_TEETH) / double(RNP_PULLEY_TEETH))
 #endif // ROTATING_NOZZLE_PLATFORM
 
 // Offset of the extruders (uncomment if using more than one and relying on firmware to position when changing).

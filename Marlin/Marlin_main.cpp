@@ -910,44 +910,46 @@ static void set_bed_level_equation(float z_at_xLeft_yFront, float z_at_xRight_yF
 #endif // ACCURATE_BED_LEVELING
 
 #ifdef ROTATING_NOZZLE_PLATFORM
-int init_rnp()
-{
-    if (current_rnp_angle!=-1)
-      return 0;
-    
-    WRITE(RNP_ENABLE_PIN, LOW);
-    
-    int i;
-    for (i = 0; i<60000; i++)       // Iterate for 4000 microsteps.
-    {
-//       WRITE(RNP_DIR_PIN, READ(RNP_STOP_PIN));     // Set the direction.
 
-      if (!READ(RNP_STOP_PIN))
-	break;
+  int init_rnp()
+  {
+      if (current_rnp_angle!=-1)
+	return 0;
       
-      digitalWrite(RNP_STEP_PIN, LOW);  // This LOW to HIGH change is what creates the
-      digitalWrite(RNP_STEP_PIN, HIGH); // "Rising Edge" so the easydriver knows to when to step.
-      delayMicroseconds(50);      // This delay time is close to top speed for this
-    }                              // particular motor. Any faster the motor stalls.
-    SERIAL_PROTOCOLPGM("init val: ");
-    SERIAL_PROTOCOLLN(i);
-    
-    return 0;
-}
-void move_rnp_to(float angle)
-{
-    if (init_rnp()!=0)
-      return;
-    
-}
-void select_rnp_nozzle(uint8_t e)
-{
-    if (e==current_rnp_nozzle)
-      return;
-    
-    move_rnp_to(110);
-    current_rnp_nozzle = e;
-}
+      WRITE(RNP_ENABLE_PIN, LOW);
+      WRITE(RNP_DIR_PIN, !RNP_ENDSTOP_INVERTING);
+      
+      int i;
+      for (i = 0; i<RNP_STEPS*360; i++)
+      {
+  //       WRITE(RNP_DIR_PIN, READ(RNP_STOP_PIN));     // Set the direction.
+
+	if (!READ(RNP_ENDSTOP_PIN))
+	  break;
+	
+	digitalWrite(RNP_STEP_PIN, LOW);  // This LOW to HIGH change is what creates the
+	digitalWrite(RNP_STEP_PIN, HIGH); // "Rising Edge" so the easydriver knows to when to step.
+	delayMicroseconds(50);      // This delay time is close to top speed for this
+      }                              // particular motor. Any faster the motor stalls.
+      SERIAL_PROTOCOLPGM("init val: ");
+      SERIAL_PROTOCOLLN(i);
+      
+      return 0;
+  }
+  void move_rnp_to(float angle)
+  {
+      if (init_rnp()!=0)
+	return;
+      
+  }
+  void select_rnp_nozzle(uint8_t e)
+  {
+      if (e==current_rnp_nozzle)
+	return;
+      
+      move_rnp_to(110);
+      current_rnp_nozzle = e;
+  }
 #endif // ROTATING_NOZZLE_PLATFORM
 
 #define MEAN_PROBE_NBR_VALUES 10
@@ -3336,7 +3338,7 @@ void process_commands()
           delayed_move_time = 0;
         }
       #elif defined(DELTA)
-/*	float curPos[4];
+	float curPos[4];
 	memcpy(curPos, current_position, sizeof(curPos));
         // Offset extruder (only by XY)
         int i;
@@ -3356,51 +3358,20 @@ void process_commands()
 	st_synchronize();
 	memcpy(current_position, curPos, sizeof(curPos));
 	memcpy(destination, curPos, sizeof(curPos));
+	
+	#ifdef ROTATING_NOZZLE_PLATFORM
+	    select_rnp_nozzle(tmp_extruder);
+	#endif // ROTATING_NOZZLE_PLATFORM
+	    
         // Set the new active extruder and position
-<<<<<<< Updated upstream
-        active_extruder = tmp_extruder;
-      #endif //else DUAL_X_CARRIAGE
-        plan_set_position(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS]);
-=======
-         active_extruder = tmp_extruder;
-	 
-	if (active_extruder==0)
-	 calculate_delta(current_position);
-	else
-	 calculate_delta(destination);
-          plan_set_position(delta[X_AXIS], delta[Y_AXIS], delta[Z_AXIS], current_position[E_AXIS]);
-// 	  calculate_delta(current_position); // change cartesian kinematic to delta kinematic;
-// 	  plan_buffer_line(delta[X_AXIS], delta[Y_AXIS], delta[Z_AXIS],
-//                    destination[E_AXIS], feedrate, active_extruder);
-// 	  memcpy(current_position, destination, sizeof(destination));
-// 	  prepare_move_raw();
-// 	  st_synchronize();
-	  //sent position to plan_set_position();
-// 	  plan_set_position(delta[X_AXIS], delta[Y_AXIS], delta[Z_AXIS], current_position[E_AXIS]);
-      #else
-        // Offset extruder (only by XY)
-        int i;
-        for(i = 0; i < 2; i++) {
-           current_position[i] = current_position[i] -
-                                 extruder_offset[i][active_extruder] +
-                                 extruder_offset[i][tmp_extruder];
-        }
- */       // Set the new active extruder and position
-// 	pinMode(E2_ENABLE_PIN, OUTPUT);
-// 	digitalWrite(E2_ENABLE_PIN, HIGH);
-// 	pinMode(E2_DIR_PIN, OUTPUT);
-// 	pinMode(E2_STEP_PIN, OUTPUT);
-      #ifdef ROTATING_NOZZLE_PLATFORM
-	  select_rnp_nozzle(tmp_extruder);
-      #endif // ROTATING_NOZZLE_PLATFORM
          active_extruder = tmp_extruder;
       #endif // DUAL_X_CARRIAGE
 	 
       #ifndef DELTA
 	  plan_set_position(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS]);
       #endif
->>>>>>> Stashed changes
-        // Move to the old position if 'F' was in the parameters
+      
+      // Move to the old position if 'F' was in the parameters
       #ifdef DUAL_X_CARRIAGE
         if(make_move && Stopped == false) {
       #else // DUAL_X_CARRIAGE

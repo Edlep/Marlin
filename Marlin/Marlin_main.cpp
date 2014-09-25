@@ -210,7 +210,8 @@ bool bed_level_calculated = false;
 bool all_axis_reset = false;
 
 #ifdef ROTATING_NOZZLE_PLATFORM
-float current_rnp_angle = -1;
+const float rnp_uninitialized_value = -3600;
+float current_rnp_angle = rnp_uninitialized_value;
 int current_rnp_nozzle = -1;
 void move_rnp_to(float angle);
 void select_rnp_nozzle(uint8_t e);
@@ -913,24 +914,22 @@ static void set_bed_level_equation(float z_at_xLeft_yFront, float z_at_xRight_yF
 
   int init_rnp()
   {
-      if (current_rnp_angle!=-1)
+      if (current_rnp_angle!=rnp_uninitialized_value)
 	return 0;
       
       WRITE(RNP_ENABLE_PIN, LOW);
       WRITE(RNP_DIR_PIN, !RNP_ENDSTOP_INVERTING);
       
       int i;
-      for (i = 0; i<RNP_STEPS*360; i++)
+      for (int i = 0; i<RNP_STEPS*360; i++)
       {
-  //       WRITE(RNP_DIR_PIN, READ(RNP_STOP_PIN));     // Set the direction.
-
 	if (!READ(RNP_ENDSTOP_PIN))
 	  break;
 	
-	digitalWrite(RNP_STEP_PIN, LOW);  // This LOW to HIGH change is what creates the
-	digitalWrite(RNP_STEP_PIN, HIGH); // "Rising Edge" so the easydriver knows to when to step.
-	delayMicroseconds(50);      // This delay time is close to top speed for this
-      }                              // particular motor. Any faster the motor stalls.
+	digitalWrite(RNP_STEP_PIN, LOW);
+	digitalWrite(RNP_STEP_PIN, HIGH);
+	delayMicroseconds(50);
+      }
       SERIAL_PROTOCOLPGM("init val: ");
       SERIAL_PROTOCOLLN(i);
       

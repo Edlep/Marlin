@@ -393,7 +393,7 @@ const bool Z_MAX_ENDSTOP_INVERTING = true; // set to true to invert the logic of
   // these are the offsets to the probe relative to the extruder tip (Hotend - Probe)
   #define X_PROBE_OFFSET_FROM_EXTRUDER 0
   #define Y_PROBE_OFFSET_FROM_EXTRUDER 0
-  #define Z_PROBE_OFFSET_FROM_EXTRUDER 0.3
+  #define Z_PROBE_OFFSET_FROM_EXTRUDER 0.4
 
   #define Z_RAISE_BEFORE_HOMING 5       // (in mm) Raise Z before homing (G28) for Probe Clearance.
                                         // Be sure you have this distance over your Z_MAX_POS in case
@@ -434,7 +434,7 @@ const bool Z_MAX_ENDSTOP_INVERTING = true; // set to true to invert the logic of
   
   #define FSR_BED_LEVELING
   #define FSR_PROBE_PIN TEMP_2_PIN // Must be an analog pin
-  #define FSR_PROBE_DELTA_VALUE 8 // Probe when the difference between the initial and the current FSR value is greater than DELTA_VALUE
+  #define FSR_PROBE_DELTA_VALUE 7 // Probe when the difference between the initial and the current FSR value is greater than DELTA_VALUE
 
   #ifdef ACCURATE_BED_LEVELING
     #define ACCURATE_BED_LEVELING_POINTS 5
@@ -459,7 +459,7 @@ const bool Z_MAX_ENDSTOP_INVERTING = true; // set to true to invert the logic of
 // For deltabots this means top and center of the Cartesian print volume.
 #define MANUAL_X_HOME_POS 0
 #define MANUAL_Y_HOME_POS 0
-#define MANUAL_Z_HOME_POS 303.9  // For delta: Distance between nozzle and print surface after homing.
+#define MANUAL_Z_HOME_POS 253.2  // For delta: Distance between nozzle and print surface after homing.
 
 //// MOVEMENT SETTINGS
 #define NUM_AXIS 4 // The axis order in all axis related arrays is X, Y, Z, E
@@ -492,13 +492,19 @@ const bool Z_MAX_ENDSTOP_INVERTING = true; // set to true to invert the logic of
   #define RNP_ENDSTOP_PIN X_MIN_PIN
   
   #define INVERT_RNP_DIR true 
-  const bool RNP_ENDSTOP_INVERTING = false; // set to true to invert the logic of the endstop.
+  const bool RNP_ENDSTOP_INVERTING = true; // set to true to invert the logic of the endstop.
   
   #define RNP_FULL_STEPS_PER_ROTATION 200
   #define RNP_MICROSTEPS 32
   #define RNP_PLATFORM_TEETH 76
   #define RNP_PULLEY_TEETH 20
-  #define RNP_STEPS (RNP_FULL_STEPS_PER_ROTATION * RNP_MICROSTEPS / 360. * double(RNP_PLATFORM_TEETH) / double(RNP_PULLEY_TEETH))
+//  #define RNP_STEPS (RNP_FULL_STEPS_PER_ROTATION * RNP_MICROSTEPS / 360. * double(RNP_PLATFORM_TEETH) / double(RNP_PULLEY_TEETH))
+  #define RNP_STEPS (RNP_FULL_STEPS_PER_ROTATION * RNP_MICROSTEPS / 360. * 4.42)
+  
+  #define RNP_E0_ANGLE 23.16
+  
+  // If defined, use a "J-head style" z-probe system
+//   #define RNP_Z_PROBE_ANGLE (RNP_E0_ANGLE + 270)
 #endif // ROTATING_NOZZLE_PLATFORM
 
 // Offset of the extruders (uncomment if using more than one and relying on firmware to position when changing).

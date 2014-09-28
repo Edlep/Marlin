@@ -211,7 +211,9 @@ bool all_axis_reset = false;
 
 #ifdef ROTATING_NOZZLE_PLATFORM
 const float rnp_uninitialized_value = -3600;
+float current_rnp_position = rnp_uninitialized_value;
 float current_rnp_angle = rnp_uninitialized_value;
+float saved_rnp_angle;
 int current_rnp_nozzle = -1;
 void move_rnp_to(float angle);
 void select_rnp_nozzle(uint8_t e);
@@ -911,27 +913,42 @@ static void set_bed_level_equation(float z_at_xLeft_yFront, float z_at_xRight_yF
 #endif // ACCURATE_BED_LEVELING
 
 #ifdef ROTATING_NOZZLE_PLATFORM
-
-  int init_rnp()
+  void raw_move_rnp(int steps, bool direction, bool checkEndstop=false)
   {
-      if (current_rnp_angle!=rnp_uninitialized_value)
-	return 0;
-      
-      WRITE(RNP_ENABLE_PIN, LOW);
-      WRITE(RNP_DIR_PIN, !RNP_ENDSTOP_INVERTING);
+      WRITE(RNP_DIR_PIN, direction);
       
       int i;
-      for (int i = 0; i<RNP_STEPS*360; i++)
+      for (i = 0; i<steps; i++)
       {
-	if (!READ(RNP_ENDSTOP_PIN))
+	if (checkEndstop && !READ(RNP_ENDSTOP_PIN))
 	  break;
 	
 	digitalWrite(RNP_STEP_PIN, LOW);
 	digitalWrite(RNP_STEP_PIN, HIGH);
 	delayMicroseconds(50);
       }
-      SERIAL_PROTOCOLPGM("init val: ");
-      SERIAL_PROTOCOLLN(i);
+      current_rnp_position = direction ? current_rnp_position+i : current_rnp_position-i;
+      current_rnp_angle = current_rnp_position / RNP_STEPS;
+  }
+
+  int init_rnp()
+  {
+      if (current_rnp_position!=rnp_uninitialized_value)
+	return 0;
+      
+      WRITE(RNP_ENABLE_PIN, LOW);
+      
+      current_rnp_position = 0;
+      
+      raw_move_rnp(RNP_STEPS*360, !INVERT_RNP_DIR, true);
+      
+      SERIAL_PROTOCOLPGM("RNP zero angle: ");
+      SERIAL_PROTOCOLLN(current_rnp_angle);
+      
+      current_rnp_position = 0;
+      current_rnp_angle = 0;
+      
+      raw_move_rnp(RNP_STEPS*RNP_E0_ANGLE, INVERT_RNP_DIR);
       
       return 0;
   }
@@ -940,13 +957,23 @@ static void set_bed_level_equation(float z_at_xLeft_yFront, float z_at_xRight_yF
       if (init_rnp()!=0)
 	return;
       
+      st_synchronize();
+      
+      if (angle > 360. || angle < 0)
+	return;
+      
+      float diff = angle-current_rnp_angle;
+      raw_move_rnp(fabs(RNP_STEPS*diff), diff>0);
+      
+      current_rnp_nozzle = rnp_uninitialized_value;
+      
   }
   void select_rnp_nozzle(uint8_t e)
   {
       if (e==current_rnp_nozzle)
 	return;
       
-      move_rnp_to(110);
+      move_rnp_to(RNP_E0_ANGLE + 90.*e);
       current_rnp_nozzle = e;
   }
 #endif // ROTATING_NOZZLE_PLATFORM
@@ -1137,8 +1164,12 @@ static void clean_up_after_endstop_move() {
     previous_millis_cmd = millis();
 }
 
-static void engage_z_probe() {
-  return; //
+static void engage_z_probe() 
+{
+    #ifdef FSR_BED_LEVELING
+      return; //
+    #endif
+    
     if (zprobe_engaged)
     {
 	SERIAL_PROTOCOLLN("zprobe already deployed");
@@ -1146,35 +1177,39 @@ static void engage_z_probe() {
     }
     // Engage Z Servo endstop if enabled
     #ifdef SERVO_ENDSTOPS
-    if (servo_endstops[Z_AXIS] > -1) {
-#if defined (ENABLE_AUTO_BED_LEVELING) && (PROBE_SERVO_DEACTIVATION_DELAY > 0)
+    if (servo_endstops[Z_AXIS] > -1) 
+    {
+      #if defined (ENABLE_AUTO_BED_LEVELING) && (PROBE_SERVO_DEACTIVATION_DELAY > 0)
         servos[servo_endstops[Z_AXIS]].attach(0);
-#endif
+      #endif
         servos[servo_endstops[Z_AXIS]].write(servo_endstop_angles[Z_AXIS * 2]);
-#if defined (ENABLE_AUTO_BED_LEVELING) && (PROBE_SERVO_DEACTIVATION_DELAY > 0)
+      #if defined (ENABLE_AUTO_BED_LEVELING) && (PROBE_SERVO_DEACTIVATION_DELAY > 0)
         delay(PROBE_SERVO_DEACTIVATION_DELAY);
         servos[servo_endstops[Z_AXIS]].detach();
-#endif
+      #endif
     }
+    #elif defined(RNP_Z_PROBE_ANGLE)
+      saved_rnp_angle = current_rnp_angle;
+      move_rnp_to(RNP_Z_PROBE_ANGLE);
     #else // Deploy the Z probe by touching the belt, no servo needed.
-    feedrate = homing_feedrate[X_AXIS];
-    destination[X_AXIS] = -33;
-    destination[Y_AXIS] = -66;
-    destination[Z_AXIS] = 14;
-    prepare_move_raw();
+      feedrate = homing_feedrate[X_AXIS];
+      destination[X_AXIS] = -33;
+      destination[Y_AXIS] = -66;
+      destination[Z_AXIS] = 14;
+      prepare_move_raw();
 
-    destination[X_AXIS] = -87;
-    destination[Y_AXIS] = -51;
-    prepare_move_raw();
-    
-    destination[Z_AXIS] = 56;
-    prepare_move_raw();
-    
-    destination[X_AXIS] = 0;
-    destination[Y_AXIS] = 0;
-    prepare_move_raw();
-    
-    st_synchronize();
+      destination[X_AXIS] = -87;
+      destination[Y_AXIS] = -51;
+      prepare_move_raw();
+      
+      destination[Z_AXIS] = 56;
+      prepare_move_raw();
+      
+      destination[X_AXIS] = 0;
+      destination[Y_AXIS] = 0;
+      prepare_move_raw();
+      
+      st_synchronize();
     #endif //SERVO_ENDSTOPS
     
     SERIAL_PROTOCOLLN("zprobe engaged");
@@ -1182,7 +1217,10 @@ static void engage_z_probe() {
 }
 
 static void retract_z_probe() {
-  return; 
+    #ifdef FSR_BED_LEVELING
+      return; //
+    #endif
+    
     if (!zprobe_engaged)
     {
 	SERIAL_PROTOCOLLN("zprobe already retracted");
@@ -1191,39 +1229,41 @@ static void retract_z_probe() {
     
     // Retract Z Servo endstop if enabled
     #ifdef SERVO_ENDSTOPS
-    if (servo_endstops[Z_AXIS] > -1) {
-#if defined (ENABLE_AUTO_BED_LEVELING) && (PROBE_SERVO_DEACTIVATION_DELAY > 0)
+      if (servo_endstops[Z_AXIS] > -1) {
+      #if defined (ENABLE_AUTO_BED_LEVELING) && (PROBE_SERVO_DEACTIVATION_DELAY > 0)
         servos[servo_endstops[Z_AXIS]].attach(0);
-#endif
+      #endif
         servos[servo_endstops[Z_AXIS]].write(servo_endstop_angles[Z_AXIS * 2 + 1]);
-#if defined (ENABLE_AUTO_BED_LEVELING) && (PROBE_SERVO_DEACTIVATION_DELAY > 0)
+      #if defined (ENABLE_AUTO_BED_LEVELING) && (PROBE_SERVO_DEACTIVATION_DELAY > 0)
         delay(PROBE_SERVO_DEACTIVATION_DELAY);
         servos[servo_endstops[Z_AXIS]].detach();
-#endif
+      #endif
     }
+    #elif defined(RNP_Z_PROBE_ANGLE)
+      move_rnp_to(saved_rnp_angle);
     #else // Push up the Z probe by moving the end effector, no servo needed.
-    feedrate = homing_feedrate[X_AXIS];
-    destination[X_AXIS] = -87;
-    destination[Y_AXIS] = -35;
-    destination[Z_AXIS] = 73;
-    prepare_move_raw();
+      feedrate = homing_feedrate[X_AXIS];
+      destination[X_AXIS] = -87;
+      destination[Y_AXIS] = -35;
+      destination[Z_AXIS] = 73;
+      prepare_move_raw();
 
-    destination[X_AXIS] = -124;
-    prepare_move_raw();
-    
-    destination[Z_AXIS] = 52;
-    prepare_move_raw();
-    
-    destination[X_AXIS] = -85;
-    destination[Y_AXIS] = -39;
-    destination[Z_AXIS] = 49;
-    prepare_move_raw();
-    
-    destination[X_AXIS] = 0;
-    destination[Y_AXIS] = 0;
-    prepare_move_raw();
-    
-    st_synchronize();
+      destination[X_AXIS] = -124;
+      prepare_move_raw();
+      
+      destination[Z_AXIS] = 52;
+      prepare_move_raw();
+      
+      destination[X_AXIS] = -85;
+      destination[Y_AXIS] = -39;
+      destination[Z_AXIS] = 49;
+      prepare_move_raw();
+      
+      destination[X_AXIS] = 0;
+      destination[Y_AXIS] = 0;
+      prepare_move_raw();
+      
+      st_synchronize();
     #endif //SERVO_ENDSTOPS
     
     SERIAL_PROTOCOLLN("zprobe retracted");
@@ -1236,16 +1276,12 @@ static float probe_pt(float x, float y, float z_before) {
   do_blocking_move_to(current_position[X_AXIS], current_position[Y_AXIS], z_before);
   do_blocking_move_to(x - X_PROBE_OFFSET_FROM_EXTRUDER, y - Y_PROBE_OFFSET_FROM_EXTRUDER, current_position[Z_AXIS]);
 
-#ifdef SERVO_ENDSTOPS
-  engage_z_probe();   // Engage Z Servo endstop if available
-#endif //SERVO_ENDSTOPS
+  if (!zprobe_engaged)
+    engage_z_probe();   // Engage Z Servo endstop if available
 
   run_z_probe();
   float measured_z = current_position[Z_AXIS];
 
-#ifdef SERVO_ENDSTOPS
-  retract_z_probe();
-#endif //SERVO_ENDSTOPS
 
   SERIAL_PROTOCOLPGM(MSG_BED);
   SERIAL_PROTOCOLPGM(" x: ");
@@ -3263,6 +3299,11 @@ void process_commands()
   else if(code_seen('T'))
   {
     tmp_extruder = code_value();
+    
+    #ifdef ROTATING_NOZZLE_PLATFORM
+	init_rnp();
+    #endif // ROTATING_NOZZLE_PLATFORM
+	
     if(tmp_extruder >= EXTRUDERS) {
       SERIAL_ECHO_START;
       SERIAL_ECHO("T");

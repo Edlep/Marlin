@@ -326,7 +326,7 @@
 // The pullups are needed if you directly connect a mechanical endswitch between the signal and ground pins.
 const bool X_MIN_ENDSTOP_INVERTING = false; // set to true to invert the logic of the endstop.
 const bool Y_MIN_ENDSTOP_INVERTING = false; // set to true to invert the logic of the endstop.
-const bool Z_MIN_ENDSTOP_INVERTING = false; // set to true to invert the logic of the endstop.
+const bool Z_MIN_ENDSTOP_INVERTING = true; // set to true to invert the logic of the endstop.
 const bool X_MAX_ENDSTOP_INVERTING = true; // set to true to invert the logic of the endstop.
 const bool Y_MAX_ENDSTOP_INVERTING = true; // set to true to invert the logic of the endstop.
 const bool Z_MAX_ENDSTOP_INVERTING = true; // set to true to invert the logic of the endstop.
@@ -393,7 +393,7 @@ const bool Z_MAX_ENDSTOP_INVERTING = true; // set to true to invert the logic of
   // these are the offsets to the probe relative to the extruder tip (Hotend - Probe)
   #define X_PROBE_OFFSET_FROM_EXTRUDER 0
   #define Y_PROBE_OFFSET_FROM_EXTRUDER 0
-  #define Z_PROBE_OFFSET_FROM_EXTRUDER 0.4
+  #define Z_PROBE_OFFSET_FROM_EXTRUDER 1.2
 
   #define Z_RAISE_BEFORE_HOMING 5       // (in mm) Raise Z before homing (G28) for Probe Clearance.
                                         // Be sure you have this distance over your Z_MAX_POS in case
@@ -432,9 +432,11 @@ const bool Z_MAX_ENDSTOP_INVERTING = true; // set to true to invert the logic of
   // Note: this feature occupies 10'206 byte
   #define ACCURATE_BED_LEVELING
   
-  #define FSR_BED_LEVELING
-  #define FSR_PROBE_PIN TEMP_2_PIN // Must be an analog pin
-  #define FSR_PROBE_DELTA_VALUE 7 // Probe when the difference between the initial and the current FSR value is greater than DELTA_VALUE
+//   #define FSR_BED_LEVELING
+  #ifdef FSR_BED_LEVELING
+    #define FSR_PROBE_PIN TEMP_2_PIN // Must be an analog pin
+    #define FSR_PROBE_DELTA_VALUE 7 // Probe when the difference between the initial and the current FSR value is greater than DELTA_VALUE
+  #endif // FSR_BED_LEVELING
 
   #ifdef ACCURATE_BED_LEVELING
     #define ACCURATE_BED_LEVELING_POINTS 5
@@ -489,29 +491,30 @@ const bool Z_MAX_ENDSTOP_INVERTING = true; // set to true to invert the logic of
   #define RNP_DIR_PIN E2_DIR_PIN
   #define RNP_ENABLE_PIN E2_ENABLE_PIN
   
-  #define RNP_ENDSTOP_PIN X_MIN_PIN
-  
   #define INVERT_RNP_DIR true 
+  
+  #define RNP_ENDSTOP_PIN 37
   const bool RNP_ENDSTOP_INVERTING = true; // set to true to invert the logic of the endstop.
   
   #define RNP_FULL_STEPS_PER_ROTATION 200
   #define RNP_MICROSTEPS 32
-  #define RNP_PLATFORM_TEETH 76
-  #define RNP_PULLEY_TEETH 20
-//  #define RNP_STEPS (RNP_FULL_STEPS_PER_ROTATION * RNP_MICROSTEPS / 360. * double(RNP_PLATFORM_TEETH) / double(RNP_PULLEY_TEETH))
-  #define RNP_STEPS (RNP_FULL_STEPS_PER_ROTATION * RNP_MICROSTEPS / 360. * 4.42)
+  #define RNP_PLATFORM_TEETH 80
+  #define RNP_PULLEY_TEETH 16
+  #define RNP_STEPS (RNP_FULL_STEPS_PER_ROTATION * RNP_MICROSTEPS / 360. * double(RNP_PLATFORM_TEETH) / double(RNP_PULLEY_TEETH))
+//   #define RNP_STEPS (RNP_FULL_STEPS_PER_ROTATION * RNP_MICROSTEPS / 360. * 5.)
   
   #define RNP_E0_ANGLE 23.16
   
   // If defined, use a "J-head style" z-probe system
-//   #define RNP_Z_PROBE_ANGLE (RNP_E0_ANGLE + 270)
+  #define RNP_Z_PROBE_ANGLE (RNP_E0_ANGLE + 180)
 #endif // ROTATING_NOZZLE_PLATFORM
 
 // Offset of the extruders (uncomment if using more than one and relying on firmware to position when changing).
 // The offset has to be X=0, Y=0 for the extruder 0 hotend (default extruder).
 // For the other hotends it is their distance from the extruder 0 hotend.
-// #define EXTRUDER_OFFSET_X {0.0, 20.00} // (in mm) for each extruder, offset of the hotend on the X axis
-// #define EXTRUDER_OFFSET_Y {0.0, 5.00}  // (in mm) for each extruder, offset of the hotend on the Y axis
+#define EXTRUDER_OFFSET_X {0.0, -0.5} // (in mm) for each extruder, offset of the hotend on the X axis
+#define EXTRUDER_OFFSET_Y {0.0, -0.5}  // (in mm) for each extruder, offset of the hotend on the Y axis
+#define EXTRUDER_OFFSET_Z {0.0, 0.21}  // (in mm) for each extruder, offset of the hotend on the Z axis
 
 // The speed change that does not require acceleration (i.e. the software might assume it can be done instantaneously)
 #define DEFAULT_XYJERK                20.0    // (mm/sec)

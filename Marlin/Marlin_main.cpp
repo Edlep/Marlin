@@ -913,11 +913,22 @@ static void set_bed_level_equation(float z_at_xLeft_yFront, float z_at_xRight_yF
 #endif // ACCURATE_BED_LEVELING
 
 #ifdef ROTATING_NOZZLE_PLATFORM
-  void raw_move_rnp(int steps, bool direction, bool checkEndstop=false)
+  void enable_rnp()
   {
-      WRITE(RNP_DIR_PIN, direction);
+      WRITE(RNP_ENABLE_PIN, LOW);
+  }
+  void disable_rnp()
+  {
+      WRITE(RNP_ENABLE_PIN, HIGH);
+      current_rnp_position = rnp_uninitialized_value;
+      current_rnp_nozzle = rnp_uninitialized_value;
+  }
+  void raw_move_rnp(const size_t &steps, const bool &direction, const bool &checkEndstop=false)
+  {
+      WRITE(RNP_DIR_PIN, direction ^ INVERT_RNP_DIR);
       
-      int i;
+      int _delay = checkEndstop ? 50 : 25;
+      size_t i;
       for (i = 0; i<steps; i++)
       {
 	if (checkEndstop && READ(RNP_ENDSTOP_PIN)^RNP_ENDSTOP_INVERTING)
@@ -925,7 +936,7 @@ static void set_bed_level_equation(float z_at_xLeft_yFront, float z_at_xRight_yF
 	
 	digitalWrite(RNP_STEP_PIN, LOW);
 	digitalWrite(RNP_STEP_PIN, HIGH);
-	delayMicroseconds(50);
+	delayMicroseconds(_delay);
 // 	delay(50);
       }
       current_rnp_position = direction ? current_rnp_position+i : current_rnp_position-i;
@@ -937,11 +948,11 @@ static void set_bed_level_equation(float z_at_xLeft_yFront, float z_at_xRight_yF
       if (current_rnp_position!=rnp_uninitialized_value)
 	return 0;
       
-      WRITE(RNP_ENABLE_PIN, LOW);
+      enable_rnp();
 // return 0;      
       current_rnp_position = 0;
       
-      raw_move_rnp(RNP_STEPS*360, !INVERT_RNP_DIR, true);
+      raw_move_rnp(RNP_STEPS*360, false, true);
       
       SERIAL_PROTOCOLPGM("RNP zero angle: ");
       SERIAL_PROTOCOLLN(current_rnp_angle);
@@ -949,7 +960,7 @@ static void set_bed_level_equation(float z_at_xLeft_yFront, float z_at_xRight_yF
       current_rnp_position = 0;
       current_rnp_angle = 0;
       
-      raw_move_rnp(RNP_STEPS*RNP_E0_ANGLE, INVERT_RNP_DIR);
+      raw_move_rnp(RNP_STEPS*RNP_E0_ANGLE, true);
       
       return 0;
   }
@@ -2500,6 +2511,12 @@ void process_commands()
               disable_e2();
             }
           #endif
+	  #ifdef ROTATING_NOZZLE_PLATFORM
+            if(code_seen('R')) 
+	    {
+              disable_rnp();
+            }
+	  #endif // ROTATING_NOZZLE_PLATFORM
         }
       }
       break;
@@ -3299,6 +3316,9 @@ void process_commands()
     
     #ifdef ROTATING_NOZZLE_PLATFORM
 	init_rnp();
+	if (current_rnp_nozzle==rnp_uninitialized_value) // asleep
+	  if (tmp_extruder==active_extruder)
+	    select_rnp_nozzle(tmp_extruder);
     #endif // ROTATING_NOZZLE_PLATFORM
 	
     if(tmp_extruder >= EXTRUDERS) {
@@ -3379,18 +3399,22 @@ void process_commands()
 				    extruder_offset[i][active_extruder] +
 				    extruder_offset[i][tmp_extruder];
 	    }
+
+	    #if defined(DELTA) && defined(ROTATING_NOZZLE_PLATFORM)
+	      bool rotateFirst = ( (extruder_offset[Z_AXIS][active_extruder]-extruder_offset[Z_AXIS][tmp_extruder]) < 0 );
+	      // Rotate before if we move down 
+	      if (rotateFirst)
+	      {
+		  select_rnp_nozzle(tmp_extruder);
+	      }
+	    #endif // ROTATING_NOZZLE_PLATFORM
+	    
 	    // Set the new active extruder and position
 	    active_extruder = tmp_extruder;
 	  #endif //else DUAL_X_CARRIAGE
 	    
 	  #ifdef DELTA 
 
-	    #ifdef ROTATING_NOZZLE_PLATFORM
-	      bool rotateFirst = ( extruder_offset[Z_AXIS][active_extruder]-extruder_offset[Z_AXIS][tmp_extruder] < 0 );
-	      // Rotate before if we move down 
-	      if (rotateFirst)
-		  select_rnp_nozzle(tmp_extruder);
-	    #endif // ROTATING_NOZZLE_PLATFORM
       
 	    calculate_delta(current_position); // change cartesian kinematic  to  delta kinematic;
 	    
@@ -3405,9 +3429,10 @@ void process_commands()
 
 	  #endif
 	    // Move to the old position if 'F' was in the parameters
-// 	    if(make_move && Stopped == false) {
+	    if(make_move || Stopped == false) 
+	    {
 	      prepare_move();
-// 	    }
+	    }
 	      
 	      #ifdef ROTATING_NOZZLE_PLATFORM
 		// Rotate after if we move up
@@ -3837,6 +3862,9 @@ void manage_inactivity()
         disable_e0();
         disable_e1();
         disable_e2();
+	#ifdef ROTATING_NOZZLE_PLATFORM
+	disable_rnp();
+	#endif // ROTATING_NOZZLE_PLATFORM
       }
     }
   }

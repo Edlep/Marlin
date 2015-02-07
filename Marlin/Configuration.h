@@ -110,7 +110,7 @@
 #define DELTA_DIAGONAL_ROD 280.0 // mm
 
 // Horizontal offset from middle of printer to linear rail.
-#define DELTA_SMOOTH_ROD_OFFSET 205.5 // mm
+#define DELTA_SMOOTH_ROD_OFFSET 203 // mm
 
 // Horizontal offset of the universal joints on the end effector.
 #define DELTA_EFFECTOR_OFFSET 19.5 // mm
@@ -393,7 +393,7 @@ const bool Z_MAX_ENDSTOP_INVERTING = true; // set to true to invert the logic of
   // these are the offsets to the probe relative to the extruder tip (Hotend - Probe)
   #define X_PROBE_OFFSET_FROM_EXTRUDER 0
   #define Y_PROBE_OFFSET_FROM_EXTRUDER 0
-  #define Z_PROBE_OFFSET_FROM_EXTRUDER 1.2
+  #define Z_PROBE_OFFSET_FROM_EXTRUDER -0.4
 
   #define Z_RAISE_BEFORE_HOMING 5       // (in mm) Raise Z before homing (G28) for Probe Clearance.
                                         // Be sure you have this distance over your Z_MAX_POS in case
@@ -461,7 +461,7 @@ const bool Z_MAX_ENDSTOP_INVERTING = true; // set to true to invert the logic of
 // For deltabots this means top and center of the Cartesian print volume.
 #define MANUAL_X_HOME_POS 0
 #define MANUAL_Y_HOME_POS 0
-#define MANUAL_Z_HOME_POS 253.2  // For delta: Distance between nozzle and print surface after homing.
+#define MANUAL_Z_HOME_POS 256.2  // For delta: Distance between nozzle and print surface after homing.
 
 //// MOVEMENT SETTINGS
 #define NUM_AXIS 4 // The axis order in all axis related arrays is X, Y, Z, E
@@ -491,7 +491,7 @@ const bool Z_MAX_ENDSTOP_INVERTING = true; // set to true to invert the logic of
   #define RNP_DIR_PIN E2_DIR_PIN
   #define RNP_ENABLE_PIN E2_ENABLE_PIN
   
-  #define INVERT_RNP_DIR true 
+  #define INVERT_RNP_DIR false 
   
   #define RNP_ENDSTOP_PIN 37
   const bool RNP_ENDSTOP_INVERTING = true; // set to true to invert the logic of the endstop.
@@ -500,10 +500,10 @@ const bool Z_MAX_ENDSTOP_INVERTING = true; // set to true to invert the logic of
   #define RNP_MICROSTEPS 32
   #define RNP_PLATFORM_TEETH 80
   #define RNP_PULLEY_TEETH 16
-  #define RNP_STEPS (RNP_FULL_STEPS_PER_ROTATION * RNP_MICROSTEPS / 360. * double(RNP_PLATFORM_TEETH) / double(RNP_PULLEY_TEETH))
+  #define RNP_STEPS (double(RNP_FULL_STEPS_PER_ROTATION) * double(RNP_MICROSTEPS) / 360. * double(RNP_PLATFORM_TEETH) / double(RNP_PULLEY_TEETH))
 //   #define RNP_STEPS (RNP_FULL_STEPS_PER_ROTATION * RNP_MICROSTEPS / 360. * 5.)
   
-  #define RNP_E0_ANGLE 23.16
+  #define RNP_E0_ANGLE 23.
   
   // If defined, use a "J-head style" z-probe system
   #define RNP_Z_PROBE_ANGLE (RNP_E0_ANGLE + 180)
@@ -512,9 +512,9 @@ const bool Z_MAX_ENDSTOP_INVERTING = true; // set to true to invert the logic of
 // Offset of the extruders (uncomment if using more than one and relying on firmware to position when changing).
 // The offset has to be X=0, Y=0 for the extruder 0 hotend (default extruder).
 // For the other hotends it is their distance from the extruder 0 hotend.
-#define EXTRUDER_OFFSET_X {0.0, -0.5} // (in mm) for each extruder, offset of the hotend on the X axis
+#define EXTRUDER_OFFSET_X {0.0, -0.6} // (in mm) for each extruder, offset of the hotend on the X axis
 #define EXTRUDER_OFFSET_Y {0.0, -0.5}  // (in mm) for each extruder, offset of the hotend on the Y axis
-#define EXTRUDER_OFFSET_Z {0.0, 0.21}  // (in mm) for each extruder, offset of the hotend on the Z axis
+#define EXTRUDER_OFFSET_Z {0.0, -0.3}  // (in mm) for each extruder, offset of the hotend on the Z axis (>0 lower)
 
 // The speed change that does not require acceleration (i.e. the software might assume it can be done instantaneously)
 #define DEFAULT_XYJERK                20.0    // (mm/sec)
